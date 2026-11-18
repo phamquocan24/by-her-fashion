@@ -1,0 +1,255 @@
+/* BY HER — AR fitting room */
+.ar-entry{display:flex;align-items:center;justify-content:center;gap:10px;background:#fff7f3;color:var(--wine);border:1px solid #d8b8bf;padding:13px 20px;font-weight:600;letter-spacing:.7px;transition:.2s}.ar-entry:hover{background:#f3e3e1}.ar-entry:focus-visible,.ar-tools button:focus-visible{outline:3px solid #9b687a;outline-offset:3px}.ar-detail-launch{width:100%;margin-top:-10px;margin-bottom:22px}.ar-shell{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(270px,.7fr);gap:32px;padding-top:38px;padding-bottom:75px}.ar-stage{position:relative;max-width:100%;width:100%;aspect-ratio:4/5;background:radial-gradient(ellipse at 50% 35%,#f8edeb,#e8d8d3);overflow:hidden;isolation:isolate;touch-action:none;user-select:none}.ar-stage video,.ar-stage .ar-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.ar-stage video{transform:scaleX(-1)}.ar-stage .ar-photo{display:none}.ar-stage.photo-mode .ar-photo{display:block}.ar-stage.photo-mode video{display:none}.ar-stage .ar-placeholder{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:28px;color:#987e84}.ar-placeholder .ar-person{font-size:100px;line-height:1.1;opacity:.4}.ar-stage.has-media .ar-placeholder{display:none}.ar-garment{position:absolute;z-index:3;width:48%;left:26%;top:25%;aspect-ratio:1/1.12;cursor:grab;touch-action:none;filter:drop-shadow(0 7px 6px #0003);display:none}.ar-stage.has-media .ar-garment{display:block}.ar-garment:active{cursor:grabbing}.ar-garment svg{width:100%;height:100%;overflow:visible}.ar-stage .ar-tip{position:absolute;z-index:4;bottom:12px;left:12px;right:12px;text-align:center;padding:9px;background:#fffcf6df;backdrop-filter:blur(5px);font-size:11px;color:#6e535b}.ar-panel{padding:27px;background:#faf4f2;align-self:start}.ar-panel h2{font-size:33px;margin:5px 0 13px}.ar-panel p{font-size:12px;color:var(--muted)}.ar-tools{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:17px 0}.ar-tools button{min-height:44px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:11px;font-size:12px}.ar-tools button:hover{border-color:var(--rose)}.ar-panel select,.ar-panel input[type=range]{width:100%;margin:9px 0 15px}.ar-panel select{padding:12px;border:1px solid var(--line);background:white}.ar-panel label{font-size:12px;font-weight:600}.ar-panel .swatches{margin:13px 0 21px}.ar-panel .btn{width:100%;margin-top:9px}.ar-note{background:#fff;border-left:3px solid var(--rose);padding:11px 13px;font-size:11px;line-height:1.65;margin-top:18px}.ar-photo-input{display:none}.ar-privacy{font-size:11px!important}.ar-mini{margin-top:12px;width:100%;padding:10px;font-size:10px;min-height:38px}.ar-size-value{float:right;color:var(--rose)}@media(max-width:750px){.ar-shell{grid-template-columns:1fr;gap:15px;padding-top:18px}.ar-panel{padding:20px}.ar-stage{max-height:70vh}.ar-nav{font-size:10px!important}}
+
+/* ---- AR v2: canvas, size, AI ---- */
+.ar-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:3;display:none;cursor:grab;touch-action:none}.ar-stage.has-media .ar-canvas{display:block}.ar-canvas:active{cursor:grabbing}.ar-check{display:flex;gap:8px;align-items:flex-start;font-weight:400!important;line-height:1.5;margin:6px 0 12px}.ar-check input{margin-top:3px}.ar-fit,.ai-block{margin:18px 0;padding:16px 0 4px;border-top:1px solid var(--line)}.ar-measure{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.ar-measure input{border:1px solid var(--line);padding:11px;min-height:42px;background:#fff;min-width:0}.ar-measure .ar-mini{grid-column:1/-1;margin-top:0}.ai-img{width:100%;margin-top:8px;border:1px solid var(--line);background:#fff}#arSizes{margin:6px 0}
+.ai-card{margin-top:12px;padding:12px;background:#fffdfa;border:1px solid var(--line)}
+.ai-badge{font-size:10.5px;font-weight:600;color:var(--wine);letter-spacing:.4px;text-transform:uppercase}
+.ai-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.ai-actions .btn{margin-top:0;padding:10px 8px;min-height:38px;font-size:10px}
+/* Tràn viền camera/ảnh trong khung thử đồ */
+.ar-stage{position:relative;max-width:100%;width:100%;overflow:hidden;isolation:isolate;touch-action:none;user-select:none;border:1px solid var(--line)}
+.ar-stage:not(.has-media){min-height:860px;background:radial-gradient(ellipse at 50% 35%,#f8edeb,#e8d8d3);border-radius:6px;box-shadow:0 12px 32px rgba(73,54,58,.08);display:flex;flex-direction:column}
+.ar-stage.has-media{min-height:860px;background:#1a1416;border-radius:6px;box-shadow:0 12px 32px rgba(73,54,58,.08)}
+.ar-stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:none}
+.ar-stage .ar-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none}
+.ar-stage.has-media:not(.photo-mode) video{display:block}
+.ar-stage.has-media.photo-mode .ar-photo{display:block}
+
+/* ==========================================================================
+   TỐI ƯU GIAO DIỆN & BIỂU TƯỢNG (SVG ICONS) CHO TRANG THỬ ÁO AR
+   ========================================================================== */
+/* ---- BỐ CỤC 3 CỘT TRANG THỬ ĐỒ AR & AI: KHUNG AR TO & NỔI BẬT ---- */
+.wrap.ar-3col-shell {
+  max-width: 1540px;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(500px, 1.7fr) minmax(290px, 0.85fr) minmax(290px, 0.85fr);
+  gap: 22px;
+  align-items: stretch;
+  padding-top: 28px;
+  padding-bottom: 75px;
+}
+
+.ar-stage-col {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.ar-stage {
+  flex: 1;
+}
+
+.ar-controls-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 24px 22px;
+  height: 100%;
+  border: 1px solid var(--line);
+}
+
+.ar-ai-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: #faf4f2;
+  padding: 24px 22px;
+  border: 1px solid var(--line);
+  height: 100%;
+}
+
+.ar-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.ar-actions-grid .btn {
+  width: 100%;
+  margin-top: 0;
+  padding: 12px 6px;
+  min-height: 44px;
+  font-size: 10.5px;
+  letter-spacing: .5px;
+  white-space: nowrap;
+  gap: 6px;
+}
+
+.ar-placeholder .ar-person-svg {
+  width: 84px;
+  height: 84px;
+}
+
+.ar-placeholder h3 {
+  font-size: 26px;
+  margin: 14px 0 6px;
+}
+
+.ar-placeholder p {
+  font-size: 13.5px;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+.ar-ai-panel .ai-block-wrap h2 {
+  font-size: 26px;
+  margin: 6px 0 12px;
+}
+
+.ar-ai-panel .ar-qr {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 1280px) {
+  .wrap.ar-3col-shell {
+    grid-template-columns: minmax(420px, 1.25fr) minmax(280px, 0.85fr);
+    gap: 20px;
+  }
+  .ar-ai-panel {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .ar-ai-panel .ar-note,
+  .ar-ai-panel .ar-privacy {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 820px) {
+  .wrap.ar-3col-shell {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding-top: 18px;
+  }
+  .ar-stage:not(.has-media) {
+    min-height: 440px;
+  }
+  .ar-ai-panel {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+  }
+}
+
+.ar-btn-icon {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+  transition: transform .2s ease;
+}
+.ar-tools button {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--ink);
+  padding: 10px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 4px;
+  transition: all .2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+.ar-tools button:hover {
+  border-color: var(--wine);
+  color: var(--wine);
+  background: #fff8f8;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(105, 69, 79, 0.12);
+}
+.ar-tools button:hover .ar-btn-icon,
+.btn:hover .ar-btn-icon {
+  transform: scale(1.15);
+}
+.ar-panel .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  margin-top: 10px;
+  border-radius: 4px;
+  letter-spacing: .6px;
+}
+.btn-arrow {
+  display: inline-block;
+  transition: transform .2s ease;
+}
+.btn:hover .btn-arrow {
+  transform: translateX(3px);
+}
+.ar-person {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.ar-person-svg {
+  width: 76px;
+  height: 76px;
+  color: var(--rose);
+  opacity: .55;
+  transition: opacity .3s ease, transform .3s ease;
+}
+.ar-stage:hover .ar-person-svg {
+  opacity: .85;
+  transform: scale(1.06);
+}
+.ar-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  background: #ffffff;
+  border-left: 3px solid var(--rose);
+  padding: 12px 14px;
+  font-size: 11.5px;
+  line-height: 1.65;
+  margin-top: 18px;
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 2px 8px rgba(73, 54, 58, 0.04);
+}
+.ar-note-icon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: var(--rose);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.ar-link-icon {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  display: inline-block;
+  vertical-align: -2px;
+  margin-left: 4px;
+  transition: transform .2s ease;
+}
+.link:hover .ar-link-icon {
+  transform: translate(2px, -2px);
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

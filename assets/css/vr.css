@@ -1,0 +1,481 @@
+/* ==========================================================================
+   BY HER — vr.css
+   Phòng trưng bày 360° Quần áo thời trang (360 Garment Turntable Viewer)
+   - Bục xoay 3D Studio, Canvas sắc nét Retina, Hiệu ứng kéo xoay mượt mà
+   - Tương thích hoàn hảo Desktop & Mobile Touch
+   - Giữ nguyên các class dùng chung: .qr-box, .steps, .ar-qr
+   ========================================================================== */
+
+/* Khung bục xoay 360° Studio */
+.vr-stage-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.vr-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  min-height: 480px;
+  max-height: 72vh;
+  background: radial-gradient(ellipse at 50% 35%, #fffaf8, #f5e9e5 60%, #ead3cd);
+  border: 1px solid var(--line);
+  box-shadow: 0 16px 40px rgba(73, 54, 58, 0.08);
+  overflow: hidden;
+  isolation: isolate;
+  user-select: none;
+  cursor: grab;
+  transition: box-shadow 0.25s ease;
+}
+
+.vr-stage:hover {
+  box-shadow: 0 20px 48px rgba(73, 54, 58, 0.12);
+}
+
+.vr-stage.grabbing {
+  cursor: grabbing !important;
+}
+
+.vr-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* HUD hiển thị thông tin nổi trên sân khấu 360 */
+.vr-hud {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.vr-hud-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(255, 252, 250, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(220, 200, 196, 0.8);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--primary);
+  box-shadow: 0 4px 14px rgba(73, 54, 58, 0.06);
+}
+
+.vr-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #309b5f;
+  box-shadow: 0 0 6px rgba(48, 155, 95, 0.5);
+  animation: vrDotPulse 2s infinite ease-in-out;
+}
+
+@keyframes vrDotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.85); }
+}
+
+.vr-angle-badge {
+  font-variant-numeric: tabular-nums;
+  color: #7b4a55;
+  background: rgba(255, 250, 248, 0.92);
+}
+
+/* Gợi ý tương tác vuốt xoay */
+.vr-stage-hint {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  background: rgba(73, 54, 58, 0.78);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 4;
+  animation: vrFadeSlide 0.3s ease-out;
+}
+
+.vr-stage-hint.show {
+  display: inline-flex;
+}
+
+.vr-stage-hint .hint-icon {
+  width: 14px;
+  height: 14px;
+}
+
+@keyframes vrFadeSlide {
+  from { opacity: 0; transform: translate(-50%, -6px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* Nút điều khiển nhanh nổi góc dưới khung sân khấu */
+.vr-stage-controls {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  display: flex;
+  gap: 8px;
+  z-index: 5;
+}
+
+.vr-stage-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(220, 200, 196, 0.9);
+  background: rgba(255, 252, 250, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--primary);
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(73, 54, 58, 0.08);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  padding: 0;
+}
+
+.vr-stage-btn:hover {
+  background: #fff;
+  color: var(--rose);
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 6px 16px rgba(73, 54, 58, 0.15);
+}
+
+.vr-stage-btn:active {
+  transform: translateY(0) scale(0.96);
+}
+
+.stage-btn-icon {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+/* ==========================================
+   BẢNG ĐIỀU KHIỂN BÊN PHẢI (PANEL)
+   ========================================== */
+
+.vr-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Bộ chọn 2 chế độ (Tabs) */
+.vr-mode-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  background: #f4e8e5;
+  padding: 5px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+}
+
+.vr-mode-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.22s ease;
+  white-space: nowrap;
+}
+
+.vr-mode-tab .tab-icon {
+  width: 15px;
+  height: 15px;
+  fill: currentColor;
+}
+
+.vr-mode-tab:hover {
+  color: var(--primary);
+}
+
+.vr-mode-tab.active {
+  background: #fff;
+  color: var(--primary);
+  box-shadow: 0 2px 8px rgba(73, 54, 58, 0.1);
+}
+
+/* Hộp khối điều khiển */
+.vr-control-box {
+  background: #faf4f2;
+  border: 1px solid var(--line);
+  padding: 12px 14px;
+  border-radius: 4px;
+}
+
+.vr-control-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.vr-control-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--primary);
+  margin: 0;
+}
+
+.vr-badge-val {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--rose);
+  background: #fff;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Thanh trượt Range thanh lịch */
+.vr-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: #e6d3cf;
+  outline: none;
+  margin: 8px 0 2px;
+  cursor: pointer;
+}
+
+.vr-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(73, 54, 58, 0.25);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.vr-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  background: var(--rose);
+}
+
+.vr-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(73, 54, 58, 0.25);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+/* Các nút góc nhìn nhanh (Preset Buttons) */
+.vr-angle-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.vr-preset-btn {
+  flex: 1 1 calc(33.333% - 6px);
+  min-width: 82px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--primary);
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.18s ease;
+}
+
+.vr-preset-btn:hover {
+  background: #fdf2f0;
+  border-color: var(--rose);
+  color: var(--rose);
+}
+
+.vr-preset-btn.active {
+  background: #49363a !important;
+  border-color: #49363a !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 8px rgba(73, 54, 58, 0.25) !important;
+}
+
+/* Phần chọn sản phẩm & màu */
+.vr-garment-select {
+  margin-top: 2px;
+}
+
+.vr-garment-select select {
+  width: 100%;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--primary);
+  border-radius: 4px;
+  outline: none;
+}
+
+.vr-garment-select select:focus {
+  border-color: var(--rose);
+}
+
+/* Nhóm nút hành động */
+.vr-action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.vr-action-buttons .btn {
+  width: 100%;
+  justify-content: center;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  padding: 11px 16px;
+}
+
+.btn-cart-accent {
+  background: #5b3d45;
+  color: #fff;
+  border: 1px solid #5b3d45;
+}
+
+.btn-cart-accent:hover {
+  background: #462c33;
+}
+
+/* ==========================================
+   CÁC PHẦN DÙNG CHUNG CŨ (GIỮ NGUYÊN)
+   ========================================== */
+
+.qr-box {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin: 14px 0;
+}
+
+.qr-box:empty {
+  display: none;
+}
+
+.qr-box .qr-img {
+  background: #fff;
+  padding: 6px;
+  border: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+
+.qr-box p {
+  margin: 4px 0 8px;
+}
+
+.ar-qr {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.success .qr-box {
+  justify-content: center;
+  text-align: left;
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  counter-reset: step;
+}
+
+.steps li {
+  counter-increment: step;
+  background: #faf4f2;
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.steps li::before {
+  content: counter(step);
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 30px;
+  color: var(--rose);
+  line-height: 1;
+}
+
+.steps li span {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+@media (max-width: 1000px) {
+  .steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .steps {
+    grid-template-columns: 1fr;
+  }
+  .vr-stage {
+    min-height: 380px;
+    max-height: 56vh;
+  }
+  .vr-mode-selector {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,421 @@
+/* ==========================================================================
+   BY HER — assistant.css
+   Giao diện Trợ lý ảo tư vấn khách hàng (floating widget, hộp thoại, thẻ sản phẩm, chips).
+   Đồng bộ bảng màu thương hiệu (--rose, --wine, --ink, --bg, --pink, --line).
+   ========================================================================== */
+
+/* Nút nổi góc phải dưới */
+/* Nút nổi góc phải dưới — Màu ngọc trai tương phản cao (không bị chìm khi cuộn xuống footer màu rượu trầm) */
+.bot-launcher {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 48;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 48px;
+  padding: 0 20px;
+  border: 1.5px solid #d8a4af;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #5c3741;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .6px;
+  box-shadow: 0 10px 28px rgba(45, 20, 26, .24), 0 2px 8px rgba(100, 72, 81, .15);
+  transition: transform .2s cubic-bezier(0.16, 1, 0.3, 1), background .2s, border-color .2s, box-shadow .2s, color .2s;
+  cursor: pointer;
+}
+.bot-launcher:hover {
+  background: #fff5f6;
+  border-color: #69454f;
+  color: #69454f;
+  transform: translateY(-3px);
+  box-shadow: 0 14px 34px rgba(45, 20, 26, .3);
+}
+.bot-launcher .bot-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.bot-icon-svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  display: block;
+  transition: transform .25s ease;
+}
+.bot-launcher:hover .bot-icon-svg {
+  transform: scale(1.12) rotate(-6deg);
+}
+.bot-launcher.has-dot::after {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #d94b68;
+  box-shadow: 0 0 0 2px #fff;
+  animation: botPulse 2s infinite;
+}
+@keyframes botPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: .85; }
+}
+
+/* Bong bóng mời chào nhẹ sau 15 giây */
+.bot-teaser {
+  position: fixed;
+  right: 22px;
+  bottom: 80px;
+  z-index: 47;
+  max-width: 280px;
+  padding: 12px 15px;
+  border: 1px solid var(--line);
+  border-radius: 14px 14px 4px 14px;
+  background: #fffdfa;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: left;
+  box-shadow: 0 12px 32px rgba(73, 54, 58, .14);
+}
+.bot-teaser:hover { border-color: var(--rose); }
+
+/* Khung hộp thoại */
+.bot-panel {
+  position: fixed;
+  right: 22px;
+  bottom: 80px;
+  z-index: 48;
+  width: min(390px, calc(100vw - 28px));
+  height: min(580px, calc(100dvh - 110px));
+  background: var(--bg);
+  border: 1px solid var(--line);
+  box-shadow: 0 18px 50px rgba(73, 54, 58, .2);
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(14px) scale(.98);
+  pointer-events: none;
+  transition: opacity .2s, transform .2s, visibility 0s .2s;
+}
+.bot-panel.on {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  pointer-events: auto;
+  transition: opacity .2s, transform .2s;
+}
+
+/* Đầu hộp thoại */
+.bot-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fdf6f5;
+  border-bottom: 1px solid var(--line);
+}
+.bot-title { display: flex; align-items: center; gap: 11px; }
+.bot-avatar {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #744a54 0%, #4f3037 100%);
+  color: #fff;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 15px;
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  box-shadow: 0 2px 8px rgba(105, 69, 79, 0.16);
+}
+.bot-online-badge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #059669;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 1px rgba(5, 150, 105, 0.4), 0 0 6px rgba(16, 185, 129, 0.5);
+  box-sizing: border-box;
+}
+.bot-title b { display: block; font-size: 13.5px; font-weight: 600; color: #3b282c; line-height: 1.25; }
+.bot-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #047857;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+.bot-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #059669;
+  box-shadow: 0 0 0 2.5px rgba(5, 150, 105, 0.25);
+  display: inline-block;
+  flex-shrink: 0;
+  animation: botOnlinePulse 2s infinite ease-in-out;
+}
+@keyframes botOnlinePulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.35);
+  }
+  50% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 5px rgba(5, 150, 105, 0.12);
+  }
+}
+.bot-head-actions { display: flex; align-items: center; gap: 6px; }
+.bot-head-actions button {
+  border: 1px solid transparent;
+  background: transparent;
+  color: #644851;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: all .18s ease;
+}
+.bot-head-actions button:hover {
+  color: var(--wine);
+  background: #f2dfdf;
+  border-color: #ebd0d4;
+  transform: translateY(-1px);
+}
+.bot-head-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  display: block;
+}
+
+/* Vùng tin nhắn */
+.bot-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--bg);
+}
+.bot-msg { display: flex; flex-direction: column; gap: 8px; max-width: 88%; }
+.bot-msg.from-bot { align-self: flex-start; }
+.bot-msg.from-user { align-self: flex-end; }
+.bot-bubble {
+  padding: 11px 14px;
+  font-size: 12.5px;
+  line-height: 1.65;
+  border-radius: 14px;
+  word-wrap: break-word;
+}
+.from-bot .bot-bubble {
+  background: #faf4f2;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-bottom-left-radius: 4px;
+}
+.from-user .bot-bubble {
+  background: var(--wine);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+/* Hiệu ứng đang gõ */
+.bot-typing { display: inline-flex; align-items: center; gap: 5px; padding: 12px 15px; }
+.bot-typing i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--rose);
+  opacity: .45;
+  animation: botPulse 1s infinite ease-in-out;
+}
+.bot-typing i:nth-child(2) { animation-delay: .18s; }
+.bot-typing i:nth-child(3) { animation-delay: .36s; }
+@keyframes botPulse {
+  0%, 80%, 100% { transform: scale(.85); opacity: .4; }
+  40% { transform: scale(1.15); opacity: 1; }
+}
+
+/* Thẻ sản phẩm đính kèm trong tin nhắn */
+.bot-cards { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.bot-card {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 10px;
+  padding: 9px;
+  background: #fff;
+  border: 1px solid var(--line);
+  align-items: center;
+}
+.bot-card img { width: 64px; height: 82px; object-fit: cover; background: #f3eeeb; }
+.bot-card-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.bot-card-body b { font-size: 12px; color: var(--ink); }
+.bot-price { font-size: 12px; font-weight: 700; color: var(--rose); }
+.bot-dots { display: flex; gap: 5px; margin: 2px 0; }
+.bot-dots i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid #b8aeb0;
+  display: inline-block;
+}
+.bot-card-actions { display: flex; gap: 6px; margin-top: 3px; }
+.bot-card-actions button {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  border: 1px solid var(--wine);
+  background: transparent;
+  color: var(--wine);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.bot-card-actions button:last-child { background: var(--wine); color: #fff; }
+.bot-card-actions button:hover { opacity: .88; transform: translateY(-1px); }
+
+.bot-mini-icon {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  display: inline-block;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+/* Gợi ý bấm nhanh (Quick Chips) */
+.bot-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 14px 10px;
+  border-top: 1px solid var(--line);
+  background: #fdf9f7;
+  max-height: 98px;
+  overflow-y: auto;
+}
+.bot-chips:empty { display: none; }
+.bot-chip {
+  padding: 6px 12px;
+  border: 1px solid #d8b8bf;
+  border-radius: 999px;
+  background: #fff7f3;
+  color: var(--wine);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .18s ease;
+}
+.bot-chip:hover {
+  background: #f3e3e1;
+  border-color: var(--wine);
+  transform: translateY(-1px);
+}
+
+/* Ô nhập tin nhắn */
+.bot-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
+  background: #fff;
+}
+.bot-form input {
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+  font-size: 12.5px;
+  background: var(--bg);
+  color: var(--ink);
+  outline: none;
+  min-width: 0;
+  border-radius: 4px;
+  transition: border-color .2s;
+}
+.bot-form input:focus {
+  border-color: var(--rose);
+  box-shadow: 0 0 0 2px rgba(164, 106, 120, 0.12);
+}
+.bot-send-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 16px;
+  min-height: 40px;
+  border: 1px solid var(--wine);
+  background: var(--wine);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .5px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all .2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.bot-send-btn:hover {
+  background: #50333a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(105, 69, 79, 0.22);
+}
+.bot-send-icon {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform .2s ease;
+}
+.bot-send-btn:hover .bot-send-icon {
+  transform: translateX(2px) translateY(-1px);
+}
+
+@media (max-width: 650px) {
+  .bot-launcher { right: 14px; bottom: 14px; height: 44px; padding: 0 16px; font-size: 11px; }
+  .bot-teaser { right: 14px; bottom: 68px; }
+  .bot-panel {
+    right: 10px;
+    left: 10px;
+    bottom: 66px;
+    width: auto;
+    height: min(72dvh, 520px);
+  }
+}

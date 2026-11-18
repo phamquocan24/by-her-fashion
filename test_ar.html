@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Test AR Try-On</title>
+  <script>
+    window.onerror = function(msg, url, line, col, err) {
+      fetch('/api/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ msg, url, line, col, stack: err ? err.stack : null })
+      }).catch(function(){});
+    };
+  </script>
+  <style>
+    body { background: #222; color: #fff; font-family: sans-serif; margin: 0; padding: 20px; }
+    .grid { display: flex; gap: 20px; }
+    .card { background: #333; padding: 10px; border-radius: 8px; text-align: center; }
+    canvas { background: #fdfaf7; border-radius: 6px; display: block; margin: 10px auto 0; }
+  </style>
+</head>
+<body>
+  <h2>Kiểm thử dựng áo BH01 (Áo cổ vuông tay dài)</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>1. Đứng thẳng tự nhiên</h3>
+      <canvas id="cv1" width="300" height="420"></canvas>
+    </div>
+    <div class="card">
+      <h3>2. Gập khuỷu tay phải</h3>
+      <canvas id="cv2" width="300" height="420"></canvas>
+    </div>
+    <div class="card">
+      <h3>3. Gập cả 2 tay vào ngực</h3>
+      <canvas id="cv3" width="300" height="420"></canvas>
+    </div>
+    <div class="card">
+      <h3>4. Dơ tay lên cao</h3>
+      <canvas id="cv4" width="300" height="420"></canvas>
+    </div>
+  </div>
+
+  <script src="assets/js/data.js?t=124"></script>
+  <script src="assets/js/garment.js?t=124"></script>
+  <script>
+    window.addEventListener('load', () => {
+      const W = 300, H = 420;
+
+      function mockGeo(shL, shR, elL, wrL, elR, wrR) {
+        const w = Math.hypot(shR.x - shL.x, shR.y - shL.y);
+        const N = { x: (shL.x + shR.x) / 2, y: (shL.y + shR.y) / 2 };
+        let ux = (shR.x - shL.x) / w, uy = (shR.y - shL.y) / w;
+        const u = { x: ux, y: uy }, v = { x: -uy, y: ux };
+        const Ht = 1.28 * w;
+        const hipCenter = { x: N.x + v.x * Ht, y: N.y + v.y * Ht };
+        const p = (x, y) => ({ x: N.x + u.x * x + v.x * y, y: N.y + u.y * x + v.y * y });
+        return {
+          N, u, v, w, Ht, hipCenter, p,
+          L: { sh: shL, el: elL, wr: wrL, elOk: !!elL, wrOk: !!wrL, hip: { x: shL.x, y: shL.y + Ht }, hipOk: true },
+          R: { sh: shR, el: elR, wr: wrR, elOk: !!elR, wrOk: !!wrR, hip: { x: shR.x, y: shR.y + Ht }, hipOk: true },
+          hipsOk: true
+        };
+      }
+
+      const shL = { x: 100, y: 130 };
+      const shR = { x: 200, y: 130 };
+
+      // 1. Natural rest
+      const geo1 = mockGeo(
+        shL, shR,
+        { x: 85, y: 220 }, { x: 70, y: 310 },
+        { x: 215, y: 220 }, { x: 230, y: 310 }
+      );
+
+      // 2. Right elbow bent, hand up
+      const geo2 = mockGeo(
+        shL, shR,
+        { x: 85, y: 220 }, { x: 70, y: 310 },
+        { x: 240, y: 215 }, { x: 185, y: 180 }
+      );
+
+      // 3. Both elbows bent
+      const geo3 = mockGeo(
+        shL, shR,
+        { x: 65, y: 215 }, { x: 120, y: 180 },
+        { x: 240, y: 215 }, { x: 185, y: 180 }
+      );
+
+      // 4. Arm raised high up (Dơ tay lên cao - reproduces user's case)
+      const geo4 = mockGeo(
+        shL, shR,
+        { x: 85, y: 220 }, { x: 70, y: 310 },
+        { x: 245, y: 110 }, { x: 270, y: 25 }
+      );
+
+      const geos = [geo1, geo2, geo3, geo4];
+
+      function renderAll() {
+        ['cv1', 'cv2', 'cv3', 'cv4'].forEach((id, idx) => {
+          const cv = document.getElementById(id);
+          const ctx = cv.getContext('2d');
+          ctx.clearRect(0, 0, W, H);
+          // person silhouette
+          ctx.fillStyle = '#f3ded7';
+          ctx.beginPath();
+          ctx.arc(150, 75, 25, 0, Math.PI * 2); // head
+          ctx.fill();
+          ctx.fillRect(143, 90, 14, 35); // neck
+
+          const geo = geos[idx];
+          drawGarment(ctx, geo, {
+            type: 'BH01',
+            colorKey: 'yellow',
+            color: '#ffd166',
+            scale: 1.0,
+            ox: 0,
+            oy: 0,
+            onImageLoad: renderAll
+          });
+        });
+
+        // Combine into one large canvas to save
+        const combined = document.createElement('canvas');
+        combined.width = W * 4 + 60;
+        combined.height = H;
+        const cctx = combined.getContext('2d');
+        cctx.fillStyle = '#222';
+        cctx.fillRect(0, 0, combined.width, combined.height);
+        ['cv1', 'cv2', 'cv3', 'cv4'].forEach((id, idx) => {
+          const cv = document.getElementById(id);
+          cctx.drawImage(cv, idx * (W + 20), 0);
+        });
+
+        fetch('/api/save_test', {
+          method: 'POST',
+          body: combined.toDataURL('image/png')
+        }).catch(() => {});
+      }
+
+      preloadAllGarments(() => {
+        setTimeout(renderAll, 200);
+      });
+      setTimeout(renderAll, 500);
+      setTimeout(renderAll, 1200);
+    });
+  </script>
+</body>
+</html>

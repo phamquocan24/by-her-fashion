@@ -1,0 +1,14 @@
+{
+  "name": "by-her",
+  "version": "1.0.0",
+  "description": "BY HER Fashion Virtual Fitting Room & 360 Garment Viewer",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "BY HER",
+  "license": "ISC"
+}
