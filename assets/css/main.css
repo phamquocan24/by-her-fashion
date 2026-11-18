@@ -1,5 +1,9 @@
 /* BY HER — main stylesheet (tách nguyên văn từ file gốc, không đổi giá trị) */
 :root{--rose:#a46a78;--wine:#69454f;--ink:#49363a;--muted:#89787a;--bg:#fffdfa;--pink:#f7eceb;--line:#eadcda;--paper:#faf5f2}*{box-sizing:border-box}html{scroll-behavior:smooth}
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
 
 /* ---- Hệ thống phông chữ thống nhất toàn diện:
    1. Tiêu đề lớn & chữ nghệ thuật: Giữ nguyên Playfair Display
@@ -359,4 +363,389 @@ button, a, input[type="button"], input[type="submit"], select, .swatch, .size, .
 @keyframes fadeInError {
   from { opacity: 0; transform: translateY(-3px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================================
+   MENU ĐIỀU HƯỚNG DRAWER TRÊN MOBILE & TABLET
+   ========================================================================== */
+.nav-toggle {
+  display: none;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .5px;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.nav-toggle:hover {
+  background: #f7eeee;
+  border-color: var(--rose);
+  color: var(--wine);
+}
+.nav-toggle-icon {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+
+.drawer.drawer-left {
+  left: 0;
+  right: auto;
+  transform: translateX(-105%);
+  box-shadow: 10px 0 60px rgba(0, 0, 0, 0.16);
+}
+.drawer.drawer-left.on {
+  transform: translateX(0);
+}
+.menu-drawer-body {
+  padding: 16px 18px 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+.menu-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.menu-item-link {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 500;
+  text-align: left;
+  border-radius: 8px;
+  transition: all .18s ease;
+  width: 100%;
+  cursor: pointer;
+}
+.menu-item-link:hover {
+  background: #fbf1ef;
+  color: var(--wine);
+  transform: translateX(4px);
+}
+.menu-item-link.menu-highlight {
+  background: #fbf4f2;
+  border: 1px solid #ebd2d6;
+  font-weight: 600;
+  color: var(--wine);
+}
+.menu-item-link.menu-highlight:hover {
+  background: #f5e4e2;
+}
+.menu-item-link .nav-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--rose);
+  flex-shrink: 0;
+}
+.menu-tag {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  padding: 2px 7px;
+  background: var(--wine);
+  color: white;
+  border-radius: 999px;
+}
+.menu-drawer-foot {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+/* ==========================================================================
+   HỆ THỐNG RESPONSIVE CHUẨN TABLET, IPAD & SMARTPHONE (KHÔNG BAO GIỜ BỊ TRÀN)
+   ========================================================================== */
+
+/* 1. Màn hình Tablet & iPad (<= 1024px) */
+@media (max-width: 1024px) {
+  .nav {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 0 clamp(16px, 3vw, 24px) !important;
+    height: 70px !important;
+    max-width: 100% !important;
+  }
+  .navlinks {
+    display: none !important;
+  }
+  .nav-toggle {
+    display: inline-flex !important;
+  }
+  .navright {
+    gap: 10px !important;
+  }
+  .nav-desktop-only {
+    display: none !important;
+  }
+  .logo-img {
+    height: 40px !important;
+  }
+  .hero {
+    grid-template-columns: 1fr !important;
+    min-height: auto !important;
+  }
+  .hero-copy {
+    padding: 44px 28px 24px !important;
+  }
+  .hero h1 {
+    font-size: clamp(32px, 5.5vw, 50px) !important;
+    margin: 12px 0 16px !important;
+  }
+  .hero-images {
+    padding: 0 28px 32px !important;
+    max-height: 420px !important;
+    gap: 10px !important;
+  }
+  .hero-images img {
+    max-height: 380px !important;
+  }
+  .catgrid, .shopgrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 20px 16px !important;
+  }
+  .detail {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+  .aboutband {
+    grid-template-columns: 1fr !important;
+  }
+  .footgrid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 26px !important;
+  }
+}
+
+/* 2. Màn hình Điện thoại Smartphone (<= 680px - iPhone, Android) */
+@media (max-width: 680px) {
+  .notice {
+    font-size: 10px !important;
+    padding: 8px 10px !important;
+    letter-spacing: .4px !important;
+  }
+  .wrap {
+    padding: 0 14px !important;
+    max-width: 100% !important;
+  }
+  .header {
+    top: 0 !important;
+  }
+  .nav {
+    height: 58px !important;
+    padding: 0 12px !important;
+  }
+  .nav-toggle {
+    padding: 6px 10px !important;
+    gap: 0 !important;
+  }
+  .nav-toggle-text {
+    display: none !important;
+  }
+  .logo-img {
+    height: 32px !important;
+  }
+  .navright {
+    gap: 6px !important;
+  }
+  .pill-btn.ar-btn {
+    padding: 6px 9px !important;
+    font-size: 10px !important;
+    gap: 4px !important;
+    letter-spacing: .2px !important;
+  }
+  .pill-btn.ar-btn .nav-icon {
+    width: 13px !important;
+    height: 13px !important;
+  }
+  .ar-text {
+    font-size: 10px !important;
+  }
+  .nav-cart {
+    padding: 6px 8px !important;
+    gap: 2px !important;
+    background: transparent !important;
+  }
+  .cart-text {
+    display: none !important;
+  }
+  .cart-count {
+    min-width: 17px !important;
+    height: 17px !important;
+    font-size: 9px !important;
+    margin-left: 2px !important;
+  }
+  .hero-copy {
+    padding: 30px 14px 20px !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+  .hero-copy .eyebrow {
+    font-size: 9px !important;
+    letter-spacing: 2px !important;
+  }
+  .hero h1 {
+    font-size: clamp(28px, 8.5vw, 36px) !important;
+    margin: 10px 0 12px !important;
+    line-height: 1.2 !important;
+  }
+  .hero p {
+    font-size: 12.5px !important;
+    max-width: 100% !important;
+  }
+  .hero-images {
+    padding: 0 12px 20px !important;
+    max-height: 300px !important;
+    gap: 8px !important;
+  }
+  .hero-images img {
+    max-height: 270px !important;
+  }
+  .hero-images img:last-child {
+    margin-top: 14px !important;
+    height: calc(100% - 14px) !important;
+  }
+  .section {
+    padding: 34px 0 !important;
+  }
+  .section.wrap {
+    padding: 34px 14px !important;
+  }
+  .sectionhead {
+    margin-bottom: 20px !important;
+  }
+  .sectionhead h2 {
+    font-size: 24px !important;
+  }
+  .catgrid, .shopgrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 14px 10px !important;
+    justify-content: stretch !important;
+    width: 100% !important;
+  }
+  .shopgrid {
+    padding-bottom: 64px !important;
+  }
+  .catgrid > *, .shopgrid > * {
+    min-width: 0 !important;
+    width: 100% !important;
+    overflow: hidden !important;
+  }
+  .catimg {
+    height: 165px !important;
+  }
+  .cat-info {
+    padding: 10px 4px !important;
+  }
+  .cat-info h3 {
+    font-size: 15px !important;
+    margin-bottom: 4px !important;
+  }
+  .cat-info p {
+    font-size: 10px !important;
+    margin-bottom: 8px !important;
+  }
+  .cat-info .link {
+    font-size: 10px !important;
+  }
+  .product-img {
+    height: 175px !important;
+  }
+  .product-name {
+    font-size: 11.5px !important;
+    margin: 8px 0 3px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .price {
+    font-size: 12px !important;
+  }
+  .swatches {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    margin: 4px 0 !important;
+    padding: 4px 4px 4px 5px !important;
+  }
+  .swatch {
+    width: 17px !important;
+    height: 17px !important;
+  }
+  .product-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 4px !important;
+    margin-top: 8px !important;
+  }
+  .product-actions .btn {
+    font-size: 9px !important;
+    padding: 5px 4px !important;
+    min-height: 29px !important;
+    width: 100% !important;
+    white-space: nowrap !important;
+    letter-spacing: .2px !important;
+  }
+  .product-actions .btn:first-child {
+    grid-column: 1 / -1 !important;
+  }
+  .stripe {
+    grid-template-columns: 1fr !important;
+    padding: 18px 12px !important;
+    gap: 14px !important;
+  }
+  .aboutband img {
+    height: 240px !important;
+  }
+  .aboutband > div {
+    padding: 20px 14px !important;
+  }
+  .footgrid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 24px 16px !important;
+  }
+  .footgrid > div:first-child,
+  .footgrid > div:last-child {
+    grid-column: 1 / -1 !important;
+  }
+  .foot-col-contact-social {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 16px !important;
+  }
+  .foot {
+    padding: 36px 0 18px !important;
+  }
+  .checklayout, .formgrid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+    padding-top: 18px !important;
+  }
+  .pagehead {
+    padding: 28px 0 20px !important;
+  }
+  .pagehead h1 {
+    font-size: 28px !important;
+  }
+  .drawer {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .drawerhead {
+    padding: 16px 18px !important;
+  }
 }

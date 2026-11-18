@@ -88,7 +88,30 @@ function go(page, fromHistory) {
   if (page === 'shop') renderShop();
   if (page === 'checkout') renderCheckout();
   if (page === 'orders') renderOrders();
-  closeCart();
+  closeAllDrawers();
+}
+
+/* ---- Quản lý Drawer Menu điều hướng Mobile ---- */
+function openNavMenu() {
+  const shade = document.getElementById('shade');
+  const menu = document.getElementById('menuDrawer');
+  if (shade) shade.classList.add('on');
+  if (menu) menu.classList.add('on');
+}
+
+function closeNavMenu() {
+  const menu = document.getElementById('menuDrawer');
+  if (menu) menu.classList.remove('on');
+  const cartDrawer = document.getElementById('cartDrawer');
+  if (!cartDrawer || !cartDrawer.classList.contains('on')) {
+    const shade = document.getElementById('shade');
+    if (shade) shade.classList.remove('on');
+  }
+}
+
+function closeAllDrawers() {
+  if (typeof closeCart === 'function') closeCart();
+  closeNavMenu();
 }
 
 window.addEventListener('popstate', () => {
@@ -99,4 +122,4 @@ window.addEventListener('popstate', () => {
   go(h, true);
 });
 
-window.addEventListener('keydown', e => { if (e.key === 'Escape') closeCart(); });
+window.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllDrawers(); });

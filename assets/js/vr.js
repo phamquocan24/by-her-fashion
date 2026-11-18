@@ -294,9 +294,11 @@ function vrRenderFrame() {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  const w = canvas.width;
-  const h = canvas.height;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = canvas.width / dpr;
+  const h = canvas.height / dpr;
   if (w <= 0 || h <= 0) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   // 1. Cập nhật góc xoay
   if (vrTargetAngle !== null) {
@@ -489,15 +491,13 @@ function vrResizeCanvas() {
   if (!stage || !canvas) return;
 
   const rect = stage.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-  const displayW = Math.max(rect.width, 320);
-  const displayH = Math.max(rect.height, 460);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const displayW = Math.max(rect.width, 280);
+  const displayH = Math.max(rect.height, 360);
 
   if (canvas.width !== Math.round(displayW * dpr) || canvas.height !== Math.round(displayH * dpr)) {
     canvas.width = Math.round(displayW * dpr);
     canvas.height = Math.round(displayH * dpr);
-    const ctx = canvas.getContext('2d');
-    if (ctx) ctx.scale(dpr, dpr);
   }
 }
 

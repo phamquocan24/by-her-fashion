@@ -409,12 +409,12 @@
 }
 
 @media (max-width: 650px) {
-  .bot-launcher { right: 14px; bottom: 14px; height: 44px; padding: 0 16px; font-size: 11px; }
-  .bot-teaser { right: 14px; bottom: 68px; }
+  .bot-launcher { right: 10px; bottom: 10px; height: 36px; padding: 0 12px; font-size: 10px; gap: 6px; }
+  .bot-teaser { right: 10px; bottom: 54px; }
   .bot-panel {
     right: 10px;
     left: 10px;
-    bottom: 66px;
+    bottom: 56px;
     width: auto;
     height: min(72dvh, 520px);
   }

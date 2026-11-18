@@ -469,13 +469,36 @@
 
 @media (max-width: 650px) {
   .steps {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .steps li {
+    padding: 12px 12px;
+    gap: 4px;
+  }
+  .steps li::before {
+    font-size: 20px;
+  }
+  .steps li b,
+  .steps li strong {
+    font-size: 12px;
+  }
+  .steps li span {
+    font-size: 11px;
+    line-height: 1.45;
   }
   .vr-stage {
-    min-height: 380px;
-    max-height: 56vh;
+    min-height: 360px;
+    max-height: 54vh;
   }
   .vr-mode-selector {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 4px;
+  }
+  .vr-mode-tab {
+    padding: 8px 6px;
+    font-size: 11px;
+    gap: 4px;
   }
 }
