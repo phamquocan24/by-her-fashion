@@ -23,6 +23,7 @@ const IMG = {
   'policy': 'assets/images/brand/chinh-sach-khach-hang.jpg',
   'care': 'assets/images/brand/huong-dan-bao-quan.jpg',
   'logo': 'assets/images/brand/logo.png',
+  'hero-logo': 'assets/images/brand/hero-logo.png',
   'fb1': 'assets/images/feedback/fb-01-minh-anh.jpg',
   'fb2': 'assets/images/feedback/fb-02-ngoc-linh.jpg',
   'fb3': 'assets/images/feedback/fb-03-thu-ha.jpg',

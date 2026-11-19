@@ -62,8 +62,8 @@ function initHeaderScroll() {
 
 function init() {
   document.getElementById('navLogo').src = IMG['logo'];
-  document.getElementById('hero1').src = IMG['bh03-hong'];
-  document.getElementById('hero2').src = IMG['bh01-vang'];
+  const hero1 = document.getElementById('hero1');
+  if (hero1) hero1.src = IMG['hero-logo'];
   document.getElementById('brandphoto').src = IMG['package'];
   document.getElementById('homeCategories').innerHTML = products.map(category).join('');
   document.getElementById('homeFeatured').innerHTML = products.map(productCard).join('');

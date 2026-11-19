@@ -749,3 +749,50 @@ button, a, input[type="button"], input[type="submit"], select, .swatch, .size, .
     padding: 16px 18px !important;
   }
 }
+
+/* ==========================================================================
+   HERO SINGLE IMAGE (Thay 2 ảnh mẫu bằng 1 ảnh Logo thương hiệu BY HER)
+   ========================================================================== */
+.hero-images.hero-single {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 40px 36px 10px;
+}
+.hero-images.hero-single img {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 460px;
+  object-fit: cover;
+  margin-top: 0 !important;
+  border-radius: 6px;
+  box-shadow: 0 14px 36px rgba(105, 69, 79, 0.08);
+}
+
+@media (max-width: 1024px) {
+  .hero-images.hero-single {
+    padding: 0 28px 32px !important;
+    max-height: none !important;
+  }
+  .hero-images.hero-single img {
+    width: auto !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: 360px !important;
+    margin-top: 0 !important;
+  }
+}
+
+@media (max-width: 680px) {
+  .hero-images.hero-single {
+    padding: 0 14px 22px !important;
+    max-height: none !important;
+  }
+  .hero-images.hero-single img {
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    margin-top: 0 !important;
+  }
+}
