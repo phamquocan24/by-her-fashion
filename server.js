@@ -36,7 +36,10 @@ const MIME = {
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
   '.svg': 'image/svg+xml',
-  '.webp': 'image/webp'
+  '.webp': 'image/webp',
+  '.glb': 'model/gltf-binary',
+  '.gltf': 'model/gltf+json',
+  '.wasm': 'application/wasm'
 };
 
 function fileToDataUrl(relPath) {

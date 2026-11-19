@@ -1,122 +1,93 @@
 /* ==========================================================================
    BY HER — vr.js
-   Phòng trưng bày 360°: Xoay 360 độ từng mẫu quần áo độc lập trên bục 3D studio.
-   - Chế độ 1: Tự động xoay 360° liên tục, mượt mà (có nút tạm dừng, đảo chiều).
-   - Chế độ 2: Tự xoay thủ công (kéo chuột trên máy tính hoặc vuốt ngón tay trên điện thoại,
-               thanh trượt góc 0°–360°, các nút góc nhìn nhanh).
-   - Đổi kiểu áo (BH01, BH02, BH03) và màu sắc tức thì từ GARMENT_PNG.
-   - Liên kết trực tiếp: Thử áo AR, Thêm giỏ hàng, Mua ngay.
-   - Chạy 100% Canvas 2D/WebGL độc lập, tải 0 giây, không phụ thuộc thư viện ngoài.
-   Phụ thuộc: data.js, core.js, cart.js
+   BY HER 3D Garment Showroom (Three.js + GLTFLoader + DRACOLoader + OrbitControls)
+   - Tải trực tiếp 3 mô hình 3D PBR nén Draco (.glb): bh01.glb, bh02.glb, bh03.glb
+   - Đổi màu PBR thời gian thực cho toàn bộ 11 biến thể màu sắc BY HER
+   - Xoay 360° đa trục (X, Y, Z) mượt mà + Zoom + Bật/tắt Lưới 3D (Wireframe) & Trục XYZ
+   - 2 Chế độ: Tự động xoay 360° & Tự xoay thủ công + 5 góc nhìn nhanh
    ========================================================================== */
 
-let vrProductId = 'BH01';
-let vrColor = 'yellow';
-let vrMode = 'auto'; // 'auto' | 'manual'
-let vrAngle = 0; // 0 đến 360 độ
-let vrTargetAngle = null; // tween về góc đích
+var vrProductId = 'BH01';
+var vrColor = 'yellow';
+
+const VR_MODELS = {
+  BH01: 'assets/models/bh01.glb',
+  BH02: 'assets/models/bh02.glb',
+  BH03: 'assets/models/bh03.glb'
+};
+
+/* Bảng màu tint đã tinh chỉnh riêng cho vật liệu vải PBR trắng (giữ nguyên nếp gấp & bóng vải) */
+const VR_FABRIC_TINT = {
+  white:  { hex: '#ffffff', roughness: 0.84, metalness: 0.02 },
+  black:  { hex: '#232022', roughness: 0.90, metalness: 0.03 },
+  red:    { hex: '#a83444', roughness: 0.85, metalness: 0.02 },
+  pink:   { hex: '#f0b2bf', roughness: 0.84, metalness: 0.02 },
+  yellow: { hex: '#f6e08b', roughness: 0.84, metalness: 0.02 }
+};
+
+/* Trạng thái điều khiển */
+let vrMode = 'auto';          // 'auto' | 'manual'
 let vrIsPlaying = true;
-let vrDirection = 1; // 1: xoay sang phải, -1: xoay sang trái
-let vrRotateSpeed = 0.28; // độ mỗi frame (tốc độ quay chậm rãi, êm ái chuẩn showroom thời trang)
-let vrZoom = 1.0; // 0.75 đến 1.4
+let vrDirection = 1;          // 1: thuận chiều, -1: ngược chiều
+let vrAngle = 0;              // Góc xoay trục Y (0..360 độ)
+let vrTargetAngle = null;     // Góc mục tiêu khi bấm góc nhìn nhanh
+let vrZoom = 1.0;             // 0.75..1.40
+let vrShowWireframe = false;
+let vrShowAxes = false;
 
-// Tương tác kéo chuột / vuốt cảm ứng
-let vrIsDragging = false;
-let vrDragStartX = 0;
-let vrDragStartAngle = 0;
-let vrLastDragX = 0;
-let vrVelocity = 0;
-let vrAnimFrameId = null;
+/* Đối tượng Three.js (lazy-loaded khi mở trang 3D) */
+let THREE_LIB = null;
+let vrRenderer = null;
+let vrScene = null;
+let vrCamera = null;
+let vrControls = null;
+let vrGltfLoader = null;
+let vrTurntableGroup = null;
+let vrGarmentContainer = null;
+let vrAxesHelper = null;
+let vrCurrentModel = null;
+let vrWireframeOverlay = null;
+const vrModelCache = {};      // Cache các file .glb đã tải
 
-// Cache ảnh áo
-const vrImageCache = {};
-let vrCurrentImage = null;
-let vrIsImageLoading = false;
+let vrMounted = false;
+let vrAnimId = null;
+let vrResizeObserver = null;
+let vrLoadSeq = 0;
+let vrUserInteracting = false;
+
+const VR_BASE_CAM_DIST = 4.75;
+const VR_AUTO_SPEED = 0.0045; // Tốc độ xoay chậm rãi, sang trọng (~15°/giây)
 
 /* ==========================================
-   KHỞI TẠO & ĐIỀU HƯỚNG
+   1. MỞ TRANG XEM 3D & ĐỒNG BỘ GIAO DIỆN
    ========================================== */
-
 function openVR(id, color) {
-  if (id && pget(id)) vrProductId = id;
-  const p = pget(vrProductId);
-  if (color && p.colors.includes(color)) {
-    vrColor = color;
-  } else if (!p.colors.includes(vrColor)) {
-    vrColor = p.colors[0];
-  }
+  const p = id ? pget(id) : products[0];
+  vrProductId = p ? p.id : products[0].id;
+  const prod = pget(vrProductId);
+  vrColor = (color && prod.colors.includes(color)) ? color : prod.colors[0];
   go('vr');
 }
 
-function vrSetStatus(s) {
-  const el = document.getElementById('vrStatus');
-  if (el) el.textContent = s;
+function vrMount() {
+  vrMounted = true;
+  vrSyncControlsUI();
+  vrInitThree().then(ok => {
+    if (!ok || !vrMounted) return;
+    vrLoadGarment(vrProductId, vrColor);
+    vrStartLoop();
+  });
 }
 
-function vrChangeProduct(id) {
-  if (!pget(id)) return;
-  vrProductId = id;
-  const p = pget(id);
-  if (!p.colors.includes(vrColor)) {
-    vrColor = p.colors[0];
+function vrUnmount() {
+  vrMounted = false;
+  if (vrAnimId) {
+    cancelAnimationFrame(vrAnimId);
+    vrAnimId = null;
   }
-  vrLoadGarment();
-  vrRenderControls();
-  vrUpdateStatusInfo();
 }
 
-function vrPickColor(c) {
-  const p = pget(vrProductId);
-  if (!p.colors.includes(c)) return;
-  vrColor = c;
-  vrLoadGarment();
-  vrRenderControls();
-  vrUpdateStatusInfo();
-}
-
-function vrUpdateStatusInfo() {
-  const p = pget(vrProductId);
-  const colorName = COLORS[vrColor]?.name || vrColor;
-  vrSetStatus(`Đang ngắm: ${p.name} — Màu ${colorName} · ${money(p.price)} · Bục xoay 360° Studio`);
-}
-
-/* Tải ảnh áo PNG tách nền */
-function vrLoadGarment() {
-  const garmentSrc = (GARMENT_PNG[vrProductId] && GARMENT_PNG[vrProductId][vrColor])
-    || (products.find(p => p.id === vrProductId)?.images[vrColor]?.[0] ? IMG[products.find(p => p.id === vrProductId).images[vrColor][0]] : '');
-
-  if (!garmentSrc) return;
-
-  const cacheKey = `${vrProductId}-${vrColor}`;
-  if (vrImageCache[cacheKey]) {
-    vrCurrentImage = vrImageCache[cacheKey];
-    vrIsImageLoading = false;
-    return;
-  }
-
-  vrIsImageLoading = true;
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.src = garmentSrc;
-  img.onload = () => {
-    vrImageCache[cacheKey] = img;
-    if (`${vrProductId}-${vrColor}` === cacheKey) {
-      vrCurrentImage = img;
-      vrIsImageLoading = false;
-    }
-  };
-  img.onerror = () => {
-    vrIsImageLoading = false;
-    vrSetStatus('Không thể tải ảnh chi tiết mẫu áo này.');
-  };
-}
-
-/* ==========================================
-   RENDER CONTROLS GIAO DIỆN
-   ========================================== */
-
-function vrRenderControls() {
-  // Cập nhật dropdown chọn kiểu áo
+function vrSyncControlsUI() {
   const sel = document.getElementById('vrProduct');
   if (sel) {
     if (!sel.options.length) {
@@ -125,514 +96,601 @@ function vrRenderControls() {
     sel.value = vrProductId;
   }
 
-  // Cập nhật tên màu và swatches
   const p = pget(vrProductId);
   const colorText = document.getElementById('vrColorText');
-  if (colorText) colorText.textContent = COLORS[vrColor]?.name || vrColor;
+  if (colorText && COLORS[vrColor]) colorText.textContent = COLORS[vrColor].name;
 
   const swatchesEl = document.getElementById('vrSwatches');
-  if (swatchesEl) {
+  if (swatchesEl && p) {
     swatchesEl.innerHTML = p.colors.map(c =>
       `<button type="button" aria-label="Màu ${COLORS[c].name}" title="${COLORS[c].name}" class="swatch ${c === vrColor ? 'selected' : ''}" style="background:${COLORS[c].hex};width:34px;height:34px" onclick="vrPickColor('${c}')"></button>`
     ).join('');
   }
 
-  // Cập nhật UI Chế độ
-  vrUpdateModeUI();
-
-  // Cập nhật Slider góc & Zoom
-  const slider = document.getElementById('vrAngleSlider');
-  if (slider) slider.value = Math.round(vrAngle) % 360;
-  const angleVal = document.getElementById('vrAngleValue');
-  if (angleVal) angleVal.textContent = `${Math.round(vrAngle) % 360}°`;
-
-  const zoomSlider = document.getElementById('vrZoomSlider');
-  if (zoomSlider) zoomSlider.value = Math.round(vrZoom * 100);
-  const zoomVal = document.getElementById('vrZoomValue');
-  if (zoomVal) zoomVal.textContent = `${Math.round(vrZoom * 100)}%`;
-
-  vrUpdatePlayPauseButton();
-}
-
-function vrUpdateModeUI() {
   const tabAuto = document.getElementById('vrTabAuto');
   const tabManual = document.getElementById('vrTabManual');
-  const hudModeText = document.getElementById('vrHudModeText');
-  const hudDot = document.getElementById('vrHudDot');
-  const hint = document.getElementById('vrStageHint');
+  if (tabAuto && tabManual) {
+    tabAuto.classList.toggle('active', vrMode === 'auto');
+    tabAuto.setAttribute('aria-selected', vrMode === 'auto' ? 'true' : 'false');
+    tabManual.classList.toggle('active', vrMode === 'manual');
+    tabManual.setAttribute('aria-selected', vrMode === 'manual' ? 'true' : 'false');
+  }
 
-  if (vrMode === 'auto') {
-    if (tabAuto) { tabAuto.classList.add('active'); tabAuto.setAttribute('aria-selected', 'true'); }
-    if (tabManual) { tabManual.classList.remove('active'); tabManual.setAttribute('aria-selected', 'false'); }
-    if (hudModeText) hudModeText.textContent = vrIsPlaying ? 'Tự động xoay 360°' : 'Tạm dừng xoay';
-    if (hudDot) { hudDot.style.background = vrIsPlaying ? '#309b5f' : '#b27f30'; }
-    if (hint) hint.classList.remove('show');
+  const hudDot = document.getElementById('vrHudDot');
+  const hudModeText = document.getElementById('vrHudModeText');
+  const hint = document.getElementById('vrStageHint');
+  if (hudDot) hudDot.classList.toggle('paused', vrMode === 'manual' || !vrIsPlaying);
+  if (hudModeText) {
+    hudModeText.textContent = vrMode === 'auto'
+      ? (vrIsPlaying ? 'Tự động xoay 360°' : 'Đã tạm dừng xoay')
+      : 'Tự xoay 3D đa trục';
+  }
+  if (hint) {
+    hint.classList.toggle('show', vrMode === 'manual');
+  }
+
+  const btnWire = document.getElementById('vrBtnWireframe');
+  if (btnWire) btnWire.classList.toggle('active', vrShowWireframe);
+
+  const btnAxes = document.getElementById('vrBtnAxes');
+  if (btnAxes) btnAxes.classList.toggle('active', vrShowAxes);
+
+  vrUpdatePlayIcon();
+  vrUpdateStatus();
+  vrUpdateHUD();
+}
+
+function vrUpdatePlayIcon() {
+  const icon = document.getElementById('vrPlayPauseIcon');
+  if (!icon) return;
+  if (vrMode === 'auto' && vrIsPlaying) {
+    icon.innerHTML = '<path d="M6 4h4v16H6zm8 0h4v16h-4z"/>';
   } else {
-    if (tabAuto) { tabAuto.classList.remove('active'); tabAuto.setAttribute('aria-selected', 'false'); }
-    if (tabManual) { tabManual.classList.add('active'); tabManual.setAttribute('aria-selected', 'true'); }
-    if (hudModeText) hudModeText.textContent = 'Tự xoay thủ công';
-    if (hudDot) { hudDot.style.background = '#8c5261'; }
-    if (hint) hint.classList.add('show');
+    icon.innerHTML = '<path d="M8 5v14l11-7z"/>';
   }
 }
 
-function vrUpdatePlayPauseButton() {
-  const icon = document.getElementById('vrPlayPauseIcon');
-  const btn = document.getElementById('vrBtnTogglePlay');
-  if (!icon || !btn) return;
-  if (vrIsPlaying && vrMode === 'auto') {
-    icon.innerHTML = '<path d="M6 4h4v16H6zm8 0h4v16h-4z"/>';
-    btn.title = 'Tạm dừng tự động xoay';
-  } else {
-    icon.innerHTML = '<path d="M8 5v14l11-7z"/>';
-    btn.title = 'Tiếp tục tự động xoay';
-  }
+function vrUpdateStatus() {
+  const st = document.getElementById('vrStatus');
+  if (!st) return;
+  const p = pget(vrProductId);
+  if (!p) return;
+  st.textContent = `Đang xem 3D: ${p.name} — Màu ${COLORS[vrColor].name} · ${money(p.price)} · Mô hình 3D PBR tương tác`;
+}
+
+function vrAngleLabel(deg) {
+  const a = ((Math.round(deg) % 360) + 360) % 360;
+  if (a >= 335 || a < 25) return 'Mặt trước';
+  if (a >= 25 && a < 65) return 'Nghiêng trước (phải)';
+  if (a >= 65 && a < 115) return 'Cạnh bên phải';
+  if (a >= 115 && a < 155) return 'Nghiêng sau (phải)';
+  if (a >= 155 && a < 205) return 'Mặt sau';
+  if (a >= 205 && a < 245) return 'Nghiêng sau (trái)';
+  if (a >= 245 && a < 295) return 'Cạnh bên trái';
+  return 'Nghiêng trước (trái)';
+}
+
+function vrUpdateHUD() {
+  const deg = ((Math.round(vrAngle) % 360) + 360) % 360;
+  const hudAngle = document.getElementById('vrHudAngle');
+  if (hudAngle) hudAngle.textContent = `${deg}° · ${vrAngleLabel(deg)}`;
+
+  const slider = document.getElementById('vrAngleSlider');
+  if (slider && document.activeElement !== slider) slider.value = deg;
+
+  const valEl = document.getElementById('vrAngleValue');
+  if (valEl) valEl.textContent = `${deg}°`;
+
+  [0, 45, 90, 180, 270].forEach(preset => {
+    const btn = document.getElementById('vrPreset' + preset);
+    if (!btn) return;
+    let diff = Math.abs(deg - preset);
+    if (diff > 180) diff = 360 - diff;
+    btn.classList.toggle('active', diff <= 12);
+  });
+}
+
+function vrSetLoader(visible, text) {
+  const el = document.getElementById('vrLoader');
+  const txt = document.getElementById('vrLoaderText');
+  if (txt && text) txt.textContent = text;
+  if (el) el.classList.toggle('hidden', !visible);
 }
 
 /* ==========================================
-   CÁC HÀNH ĐỘNG ĐIỀU KHIỂN GÓC XOAY
+   2. KHỞI TẠO THREE.JS STUDIO 3D ENGINE
    ========================================== */
-
-function vrSetMode(mode) {
-  vrMode = mode;
-  if (mode === 'auto') {
-    vrIsPlaying = true;
-    vrTargetAngle = null;
+async function vrInitThree() {
+  if (vrRenderer) {
+    vrResizeThree();
+    return true;
   }
-  vrUpdateModeUI();
-  vrUpdatePlayPauseButton();
+
+  const stage = document.getElementById('vrStage');
+  const canvas = document.getElementById('vrCanvas');
+  if (!stage || !canvas) return false;
+
+  vrSetLoader(true, 'Đang khởi tạo không gian 3D...');
+
+  try {
+    const [THREE, { OrbitControls }, { GLTFLoader }, { DRACOLoader }, { RoomEnvironment }] = await Promise.all([
+      import('three'),
+      import('three/addons/controls/OrbitControls.js'),
+      import('three/addons/loaders/GLTFLoader.js'),
+      import('three/addons/loaders/DRACOLoader.js'),
+      import('three/addons/environments/RoomEnvironment.js')
+    ]);
+    THREE_LIB = THREE;
+
+    /* 1. Renderer PBR chất lượng cao */
+    vrRenderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      alpha: true,
+      powerPreference: 'high-performance'
+    });
+    vrRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    vrRenderer.outputColorSpace = THREE.SRGBColorSpace;
+    vrRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+    vrRenderer.toneMappingExposure = 1.05;
+    vrRenderer.shadowMap.enabled = true;
+    vrRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    /* 2. Scene & Studio Environment (ánh sáng phản xạ dịu nhẹ chuẩn thời trang) */
+    vrScene = new THREE.Scene();
+
+    const pmremGenerator = new THREE.PMREMGenerator(vrRenderer);
+    vrScene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+    vrScene.environmentIntensity = 0.55;
+    pmremGenerator.dispose();
+
+    /* 3. Camera */
+    const rect = stage.getBoundingClientRect();
+    const w = Math.max(rect.width, 300);
+    const h = Math.max(rect.height, 360);
+    vrCamera = new THREE.PerspectiveCamera(36, w / h, 0.1, 100);
+    vrCamera.position.set(0, 0.35, VR_BASE_CAM_DIST);
+
+    /* 4. Hệ thống ánh sáng Studio 3 điểm */
+    const hemiLight = new THREE.HemisphereLight(0xfffaf6, 0xead8d3, 0.85);
+    vrScene.add(hemiLight);
+
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.35);
+    keyLight.position.set(3.2, 5.2, 4.5);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(1024, 1024);
+    keyLight.shadow.bias = -0.0005;
+    vrScene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0xfff0ec, 0.65);
+    fillLight.position.set(-4.0, 2.2, 2.5);
+    vrScene.add(fillLight);
+
+    const rimLight = new THREE.DirectionalLight(0xffe8ee, 0.75);
+    rimLight.position.set(0, 3.0, -4.5);
+    vrScene.add(rimLight);
+
+    /* 5. Nhóm Bục xoay 3D & Chứa áo */
+    vrTurntableGroup = new THREE.Group();
+    vrScene.add(vrTurntableGroup);
+
+    vrBuildPedestal(THREE);
+
+    vrGarmentContainer = new THREE.Group();
+    vrTurntableGroup.add(vrGarmentContainer);
+
+    /* Trục tọa độ 3D (X: đỏ, Y: xanh lá, Z: xanh dương) */
+    vrAxesHelper = new THREE.AxesHelper(1.1);
+    vrAxesHelper.position.set(-1.15, -1.05, 0);
+    vrAxesHelper.visible = vrShowAxes;
+    vrScene.add(vrAxesHelper);
+
+    /* 6. OrbitControls: Xoay 360° đa trục & Zoom mượt */
+    vrControls = new OrbitControls(vrCamera, canvas);
+    vrControls.enableDamping = true;
+    vrControls.dampingFactor = 0.07;
+    vrControls.enablePan = false;
+    vrControls.minDistance = 2.2;
+    vrControls.maxDistance = 6.0;
+    vrControls.minPolarAngle = Math.PI * 0.12;  // Cho phép nhìn nghiêng từ trên xuống cổ/vai
+    vrControls.maxPolarAngle = Math.PI * 0.82;  // Cho phép nhìn từ dưới lên gấu áo
+    vrControls.target.set(0, 0.05, 0);
+
+    vrControls.addEventListener('start', () => {
+      vrUserInteracting = true;
+      vrTargetAngle = null;
+    });
+    vrControls.addEventListener('end', () => {
+      vrUserInteracting = false;
+    });
+    vrControls.addEventListener('change', () => {
+      // Đồng bộ thanh trượt Zoom khi người dùng cuộn chuột / chụm ngón tay
+      const dist = vrCamera.position.distanceTo(vrControls.target);
+      const pct = Math.round(Math.max(75, Math.min(140, (VR_BASE_CAM_DIST / dist) * 100)));
+      const zSlider = document.getElementById('vrZoomSlider');
+      const zVal = document.getElementById('vrZoomValue');
+      if (zSlider && document.activeElement !== zSlider) zSlider.value = pct;
+      if (zVal) zVal.textContent = `${pct}%`;
+    });
+
+    /* 7. GLTFLoader + DRACOLoader */
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
+    dracoLoader.preload();
+
+    vrGltfLoader = new GLTFLoader();
+    vrGltfLoader.setDRACOLoader(dracoLoader);
+
+    /* 8. Responsive ResizeObserver */
+    vrResizeThree();
+    if (typeof ResizeObserver !== 'undefined') {
+      vrResizeObserver = new ResizeObserver(() => vrResizeThree());
+      vrResizeObserver.observe(stage);
+    }
+    window.addEventListener('resize', vrResizeThree);
+
+    return true;
+  } catch (err) {
+    console.error('[BY HER 3D] Init error:', err);
+    vrSetLoader(true, 'Không thể khởi tạo WebGL 3D trên trình duyệt này.');
+    return false;
+  }
+}
+
+function vrBuildPedestal(THREE) {
+  const pedY = -1.16;
+
+  /* Thân bục xoay 3D tông hồng kem BY HER */
+  const pedGeo = new THREE.CylinderGeometry(1.08, 1.14, 0.14, 64);
+  const pedMat = new THREE.MeshStandardMaterial({
+    color: 0xf4e4df,
+    roughness: 0.55,
+    metalness: 0.08
+  });
+  const pedMesh = new THREE.Mesh(pedGeo, pedMat);
+  pedMesh.position.y = pedY;
+  pedMesh.receiveShadow = true;
+  vrTurntableGroup.add(pedMesh);
+
+  /* Viền kim loại vàng hồng mảnh quanh mặt bục */
+  const rimGeo = new THREE.TorusGeometry(1.08, 0.012, 16, 72);
+  const rimMat = new THREE.MeshStandardMaterial({
+    color: 0xc99ca6,
+    roughness: 0.35,
+    metalness: 0.45
+  });
+  const rimMesh = new THREE.Mesh(rimGeo, rimMat);
+  rimMesh.rotation.x = Math.PI / 2;
+  rimMesh.position.y = pedY + 0.071;
+  vrTurntableGroup.add(rimMesh);
+
+  /* Vạch chia độ 360° xoay theo bục */
+  const tickMatMain = new THREE.MeshBasicMaterial({ color: 0x8f5763 });
+  const tickMatSub = new THREE.MeshBasicMaterial({ color: 0xcba8b0 });
+  for (let i = 0; i < 36; i++) {
+    const isMain = i % 9 === 0;
+    const len = isMain ? 0.12 : 0.055;
+    const tickGeo = new THREE.BoxGeometry(isMain ? 0.014 : 0.007, 0.004, len);
+    const tick = new THREE.Mesh(tickGeo, isMain ? tickMatMain : tickMatSub);
+    const a = (i * 10 * Math.PI) / 180;
+    const r = 1.0 - len / 2;
+    tick.position.set(Math.sin(a) * r, pedY + 0.073, Math.cos(a) * r);
+    tick.rotation.y = a;
+    vrTurntableGroup.add(tick);
+  }
+
+  /* Bóng mềm trên mặt bục ngay dưới gấu áo */
+  const shadowCanvas = document.createElement('canvas');
+  shadowCanvas.width = 256;
+  shadowCanvas.height = 256;
+  const sctx = shadowCanvas.getContext('2d');
+  const grad = sctx.createRadialGradient(128, 128, 10, 128, 128, 120);
+  grad.addColorStop(0, 'rgba(73, 54, 58, 0.24)');
+  grad.addColorStop(0.55, 'rgba(73, 54, 58, 0.08)');
+  grad.addColorStop(1, 'rgba(73, 54, 58, 0)');
+  sctx.fillStyle = grad;
+  sctx.fillRect(0, 0, 256, 256);
+
+  const shadowTex = new THREE.CanvasTexture(shadowCanvas);
+  const shadowPlane = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.7, 1.7),
+    new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false })
+  );
+  shadowPlane.rotation.x = -Math.PI / 2;
+  shadowPlane.position.y = pedY + 0.075;
+  vrTurntableGroup.add(shadowPlane);
+}
+
+function vrResizeThree() {
+  if (!vrRenderer || !vrCamera) return;
+  const stage = document.getElementById('vrStage');
+  if (!stage) return;
+  const rect = stage.getBoundingClientRect();
+  const w = Math.max(Math.round(rect.width), 280);
+  const h = Math.max(Math.round(rect.height), 340);
+  vrCamera.aspect = w / h;
+  vrCamera.updateProjectionMatrix();
+  vrRenderer.setSize(w, h, false);
+}
+
+/* ==========================================
+   3. TẢI MODEL .GLB & ÁP MÀU VẢI PBR
+   ========================================== */
+async function vrLoadGarment(productId, colorKey) {
+  if (!vrGltfLoader || !THREE_LIB) return;
+  const seq = ++vrLoadSeq;
+  const url = VR_MODELS[productId] || VR_MODELS.BH01;
+
+  if (vrModelCache[productId]) {
+    vrAttachModel(vrModelCache[productId], colorKey);
+    vrSetLoader(false);
+    return;
+  }
+
+  vrSetLoader(true, `Đang tải mô hình 3D ${productId}...`);
+
+  vrGltfLoader.load(
+    url,
+    gltf => {
+      if (seq !== vrLoadSeq) return;
+      const root = gltf.scene;
+      vrNormalizeModel(root);
+      vrModelCache[productId] = root;
+      vrAttachModel(root, vrColor);
+      vrSetLoader(false);
+    },
+    xhr => {
+      if (seq !== vrLoadSeq) return;
+      if (xhr.total > 0) {
+        const pct = Math.min(100, Math.round((xhr.loaded / xhr.total) * 100));
+        vrSetLoader(true, `Đang tải mô hình 3D ${productId}... ${pct}%`);
+      }
+    },
+    err => {
+      if (seq !== vrLoadSeq) return;
+      console.error('[BY HER 3D] Load GLB error:', err);
+      vrSetLoader(true, 'Không thể tải mô hình 3D. Vui lòng thử lại.');
+    }
+  );
+}
+
+/* Căn giữa tâm & chuẩn hóa tỉ lệ mọi file GLB để đứng vừa đẹp trên bục xoay */
+function vrNormalizeModel(root) {
+  const THREE = THREE_LIB;
+  const box = new THREE.Box3().setFromObject(root);
+  const size = new THREE.Vector3();
+  const center = new THREE.Vector3();
+  box.getSize(size);
+  box.getCenter(center);
+
+  const maxDim = Math.max(size.x, size.y, size.z) || 1;
+  const targetHeight = 1.85;
+  const scale = targetHeight / (size.y || maxDim);
+
+  root.scale.setScalar(scale);
+
+  // Tính lại bounding box sau khi scale
+  const scaledBox = new THREE.Box3().setFromObject(root);
+  const scaledCenter = new THREE.Vector3();
+  scaledBox.getCenter(scaledCenter);
+
+  root.position.x -= scaledCenter.x;
+  root.position.z -= scaledCenter.z;
+  // Đặt đáy áo cách mặt bục xoay một khoảng nhẹ thanh thoát (-0.88)
+  root.position.y -= scaledBox.min.y + 0.88;
+
+  root.traverse(obj => {
+    if (obj.isMesh) {
+      obj.castShadow = true;
+      obj.receiveShadow = true;
+      if (obj.material) {
+        obj.material = obj.material.clone();
+        obj.material.side = THREE.DoubleSide;
+      }
+    }
+  });
+}
+
+function vrAttachModel(modelGroup, colorKey) {
+  const THREE = THREE_LIB;
+  // Gỡ model cũ khỏi container (nhưng vẫn giữ trong cache để chuyển lại tức thì)
+  while (vrGarmentContainer.children.length > 0) {
+    vrGarmentContainer.remove(vrGarmentContainer.children[0]);
+  }
+  vrWireframeOverlay = null;
+
+  vrCurrentModel = modelGroup;
+  vrGarmentContainer.add(vrCurrentModel);
+
+  // Tạo lớp phủ Wireframe 3D kỹ thuật (ẩn/hiện theo nút bật lưới)
+  vrWireframeOverlay = vrCurrentModel.clone();
+  const wireMat = new THREE.MeshBasicMaterial({
+    color: 0x7cb8e8,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.28,
+    depthTest: true
+  });
+  vrWireframeOverlay.traverse(obj => {
+    if (obj.isMesh) {
+      obj.material = wireMat;
+      obj.castShadow = false;
+      obj.receiveShadow = false;
+    }
+  });
+  vrWireframeOverlay.scale.multiplyScalar(1.004);
+  vrWireframeOverlay.visible = vrShowWireframe;
+  vrGarmentContainer.add(vrWireframeOverlay);
+
+  vrApplyFabricColor(colorKey);
+}
+
+function vrApplyFabricColor(colorKey) {
+  if (!vrCurrentModel || !THREE_LIB) return;
+  const preset = VR_FABRIC_TINT[colorKey] || {
+    hex: (COLORS[colorKey] && COLORS[colorKey].hex) || '#ffffff',
+    roughness: 0.85,
+    metalness: 0.02
+  };
+  const tintColor = new THREE_LIB.Color(preset.hex);
+
+  vrCurrentModel.traverse(obj => {
+    if (obj.isMesh && obj.material) {
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      mats.forEach(mat => {
+        if (mat.color) mat.color.copy(tintColor);
+        if (typeof mat.roughness === 'number') mat.roughness = preset.roughness;
+        if (typeof mat.metalness === 'number') mat.metalness = preset.metalness;
+        mat.needsUpdate = true;
+      });
+    }
+  });
+}
+
+/* ==========================================
+   4. VÒNG LẶP RENDER 60FPS
+   ========================================== */
+function vrStartLoop() {
+  if (vrAnimId) cancelAnimationFrame(vrAnimId);
+  const tick = () => {
+    if (!vrMounted) return;
+    vrAnimId = requestAnimationFrame(tick);
+
+    if (vrTurntableGroup) {
+      if (vrTargetAngle !== null) {
+        let diff = vrTargetAngle - vrAngle;
+        while (diff > 180) diff -= 360;
+        while (diff < -180) diff += 360;
+        if (Math.abs(diff) < 0.4) {
+          vrAngle = vrTargetAngle;
+          vrTargetAngle = null;
+        } else {
+          vrAngle += diff * 0.14;
+        }
+        vrTurntableGroup.rotation.y = (vrAngle * Math.PI) / 180;
+        vrUpdateHUD();
+      } else if (vrMode === 'auto' && vrIsPlaying && !vrUserInteracting) {
+        vrAngle = (vrAngle + (VR_AUTO_SPEED * 180 / Math.PI) * vrDirection + 360) % 360;
+        vrTurntableGroup.rotation.y = (vrAngle * Math.PI) / 180;
+        vrUpdateHUD();
+      }
+    }
+
+    if (vrControls) vrControls.update();
+    if (vrRenderer && vrScene && vrCamera) {
+      vrRenderer.render(vrScene, vrCamera);
+    }
+  };
+  vrAnimId = requestAnimationFrame(tick);
+}
+
+/* ==========================================
+   5. CÁC HÀM TƯƠNG TÁC NGƯỜI DÙNG
+   ========================================== */
+function vrSetMode(mode) {
+  vrMode = mode === 'manual' ? 'manual' : 'auto';
+  vrTargetAngle = null;
+  if (vrMode === 'auto') vrIsPlaying = true;
+  vrSyncControlsUI();
 }
 
 function vrTogglePlay() {
   if (vrMode === 'manual') {
-    vrSetMode('auto');
+    vrMode = 'auto';
     vrIsPlaying = true;
   } else {
     vrIsPlaying = !vrIsPlaying;
   }
-  vrUpdateModeUI();
-  vrUpdatePlayPauseButton();
+  vrSyncControlsUI();
 }
 
 function vrToggleDirection() {
-  vrDirection = -vrDirection;
-  toast(vrDirection > 0 ? 'Đã đổi: Xoay sang phải' : 'Đã đổi: Xoay sang trái');
+  vrDirection *= -1;
+  if (vrMode === 'manual') {
+    vrMode = 'auto';
+    vrIsPlaying = true;
+  }
+  vrSyncControlsUI();
 }
 
 function vrResetAngle() {
-  vrSetAngle(0);
+  vrTargetAngle = 0;
+  vrZoom = 1.0;
+  if (vrCamera && vrControls) {
+    vrCamera.position.set(0, 0.35, VR_BASE_CAM_DIST);
+    vrControls.target.set(0, 0.05, 0);
+    vrControls.update();
+  }
+  const zSlider = document.getElementById('vrZoomSlider');
+  const zVal = document.getElementById('vrZoomValue');
+  if (zSlider) zSlider.value = 100;
+  if (zVal) zVal.textContent = '100%';
+  vrUpdateHUD();
 }
 
-function vrSetAngle(target) {
-  target = ((target % 360) + 360) % 360;
-  vrTargetAngle = target;
-  document.querySelectorAll('.vr-preset-btn').forEach(btn => btn.classList.remove('active'));
-  const targetBtn = document.getElementById(`vrPreset${target}`);
-  if (targetBtn) targetBtn.classList.add('active');
+function vrSetAngle(deg) {
+  vrMode = 'manual';
+  vrTargetAngle = ((deg % 360) + 360) % 360;
+  vrSyncControlsUI();
 }
 
 function vrOnSliderAngle(val) {
   vrMode = 'manual';
-  vrIsPlaying = false;
   vrTargetAngle = null;
-  vrAngle = parseFloat(val) % 360;
-  vrUpdateModeUI();
-  vrUpdatePlayPauseButton();
-  vrUpdateHUD();
+  vrAngle = Number(val) || 0;
+  if (vrTurntableGroup) {
+    vrTurntableGroup.rotation.y = (vrAngle * Math.PI) / 180;
+  }
+  vrSyncControlsUI();
 }
 
 function vrOnSliderZoom(val) {
-  vrZoom = parseFloat(val) / 100;
-  const zoomVal = document.getElementById('vrZoomValue');
-  if (zoomVal) zoomVal.textContent = `${Math.round(vrZoom * 100)}%`;
+  const pct = Number(val) || 100;
+  vrZoom = pct / 100;
+  const zVal = document.getElementById('vrZoomValue');
+  if (zVal) zVal.textContent = `${pct}%`;
+
+  if (vrCamera && vrControls && THREE_LIB) {
+    const dir = new THREE_LIB.Vector3()
+      .subVectors(vrCamera.position, vrControls.target)
+      .normalize();
+    const newDist = Math.max(2.2, Math.min(6.0, VR_BASE_CAM_DIST / vrZoom));
+    vrCamera.position.copy(vrControls.target).addScaledVector(dir, newDist);
+    vrControls.update();
+  }
+}
+
+function vrToggleWireframe() {
+  vrShowWireframe = !vrShowWireframe;
+  if (vrWireframeOverlay) vrWireframeOverlay.visible = vrShowWireframe;
+  const btn = document.getElementById('vrBtnWireframe');
+  if (btn) btn.classList.toggle('active', vrShowWireframe);
+}
+
+function vrToggleAxes() {
+  vrShowAxes = !vrShowAxes;
+  if (vrAxesHelper) vrAxesHelper.visible = vrShowAxes;
+  const btn = document.getElementById('vrBtnAxes');
+  if (btn) btn.classList.toggle('active', vrShowAxes);
+}
+
+function vrChangeProduct(id) {
+  const p = pget(id);
+  if (!p) return;
+  vrProductId = p.id;
+  if (!p.colors.includes(vrColor)) vrColor = p.colors[0];
+  vrSyncControlsUI();
+  vrLoadGarment(vrProductId, vrColor);
+}
+
+function vrPickColor(colorKey) {
+  const p = pget(vrProductId);
+  if (!p || !p.colors.includes(colorKey)) return;
+  vrColor = colorKey;
+  vrSyncControlsUI();
+  vrApplyFabricColor(vrColor);
 }
 
 function vrAddToCart(buyNow) {
-  addToCart(vrProductId, vrColor, 'M', 1, buyNow, false);
-}
-
-function vrViewProduct() {
-  openProduct(vrProductId, vrColor);
-}
-
-/* Cập nhật HUD hiển thị góc xoay & preset */
-function vrUpdateHUD() {
-  const norm = ((Math.round(vrAngle) % 360) + 360) % 360;
-  const hudAngle = document.getElementById('vrHudAngle');
-  const slider = document.getElementById('vrAngleSlider');
-  const angleVal = document.getElementById('vrAngleValue');
-
-  let desc = 'Mặt trước';
-  if (norm >= 25 && norm < 70) desc = 'Nghiêng trước (phải)';
-  else if (norm >= 70 && norm < 115) desc = 'Cạnh bên (phải)';
-  else if (norm >= 115 && norm < 160) desc = 'Nghiêng sau (phải)';
-  else if (norm >= 160 && norm <= 200) desc = 'Mặt sau';
-  else if (norm > 200 && norm <= 245) desc = 'Nghiêng sau (trái)';
-  else if (norm > 245 && norm <= 290) desc = 'Cạnh bên (trái)';
-  else if (norm > 290 && norm <= 335) desc = 'Nghiêng trước (trái)';
-
-  if (hudAngle) hudAngle.textContent = `${norm}° · ${desc}`;
-  if (slider && document.activeElement !== slider) slider.value = norm;
-  if (angleVal) angleVal.textContent = `${norm}°`;
-
-  [0, 45, 90, 180, 270].forEach(p => {
-    const btn = document.getElementById(`vrPreset${p}`);
-    if (btn) {
-      if (Math.abs(norm - p) <= 4) btn.classList.add('active');
-      else btn.classList.remove('active');
-    }
-  });
-}
-
-/* ==========================================
-   ENGINE ĐỒ HỌA 3D 360° CANVAS
-   ========================================== */
-
-function vrRenderFrame() {
-  const canvas = document.getElementById('vrCanvas');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const w = canvas.width / dpr;
-  const h = canvas.height / dpr;
-  if (w <= 0 || h <= 0) return;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-  // 1. Cập nhật góc xoay
-  if (vrTargetAngle !== null) {
-    let diff = vrTargetAngle - vrAngle;
-    while (diff > 180) diff -= 360;
-    while (diff < -180) diff += 360;
-    if (Math.abs(diff) < 0.3) {
-      vrAngle = vrTargetAngle;
-      vrTargetAngle = null;
-    } else {
-      vrAngle += diff * 0.18;
-    }
-    vrUpdateHUD();
-  } else if (vrMode === 'auto' && vrIsPlaying && !vrIsDragging) {
-    vrAngle = (vrAngle + vrRotateSpeed * vrDirection + 360) % 360;
-    vrUpdateHUD();
-  } else if (vrMode === 'manual' && !vrIsDragging && Math.abs(vrVelocity) > 0.02) {
-    vrAngle = (vrAngle + vrVelocity + 360) % 360;
-    vrVelocity *= 0.92;
-    vrUpdateHUD();
-  }
-
-  const rad = (vrAngle * Math.PI) / 180;
-  const cosA = Math.cos(rad);
-  const sinA = Math.sin(rad);
-
-  // 2. Nền Studio sang trọng
-  ctx.clearRect(0, 0, w, h);
-
-  const bgGrad = ctx.createRadialGradient(w * 0.5, h * 0.42, 40, w * 0.5, h * 0.5, Math.max(w, h) * 0.7);
-  bgGrad.addColorStop(0, '#fffaf7');
-  bgGrad.addColorStop(0.55, '#f7ebe6');
-  bgGrad.addColorStop(1, '#ebd7d1');
-  ctx.fillStyle = bgGrad;
-  ctx.fillRect(0, 0, w, h);
-
-  // Ánh sáng spotlight từ trần studio
-  const spotGrad = ctx.createRadialGradient(w * 0.5, h * 0.15, 10, w * 0.5, h * 0.38, w * 0.45);
-  spotGrad.addColorStop(0, 'rgba(255, 255, 255, 0.75)');
-  spotGrad.addColorStop(0.6, 'rgba(255, 248, 245, 0.25)');
-  spotGrad.addColorStop(1, 'rgba(255, 245, 240, 0)');
-  ctx.fillStyle = spotGrad;
-  ctx.fillRect(0, 0, w, h);
-
-  // 3. Tọa độ bục xoay 3D (Showroom Luxury Pedestal)
-  const cx = w * 0.5;
-  const cyPedestal = h * 0.82;
-  const pedRadiusX = Math.min(w * 0.36, 190);
-  const pedRadiusY = pedRadiusX * 0.28;
-  const pedHeight = 22;
-
-  // Bóng đổ của toàn bộ bục xoay xuống sàn
-  ctx.save();
-  ctx.beginPath();
-  ctx.ellipse(cx, cyPedestal + pedHeight + 8, pedRadiusX * 1.08, pedRadiusY * 1.12, 0, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(78, 54, 58, 0.12)';
-  ctx.filter = 'blur(10px)';
-  ctx.fill();
-  ctx.restore();
-
-  // Thân bục 3D (Độ dày trụ)
-  ctx.save();
-  const rimGrad = ctx.createLinearGradient(cx - pedRadiusX, 0, cx + pedRadiusX, 0);
-  rimGrad.addColorStop(0, '#c7a39b');
-  rimGrad.addColorStop(0.25, '#ebd1cb');
-  rimGrad.addColorStop(0.5, '#f4ded9');
-  rimGrad.addColorStop(0.8, '#d4aea5');
-  rimGrad.addColorStop(1, '#b08a82');
-
-  ctx.fillStyle = rimGrad;
-  ctx.beginPath();
-  ctx.ellipse(cx, cyPedestal + pedHeight, pedRadiusX, pedRadiusY, 0, 0, Math.PI);
-  ctx.lineTo(cx - pedRadiusX, cyPedestal);
-  ctx.ellipse(cx, cyPedestal, pedRadiusX, pedRadiusY, 0, Math.PI, 0, true);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.strokeStyle = '#e7cbc5';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.restore();
-
-  // Mặt trên của bục xoay (Mặt đĩa elip)
-  ctx.save();
-  const topGrad = ctx.createRadialGradient(cx, cyPedestal - pedRadiusY * 0.2, 10, cx, cyPedestal, pedRadiusX);
-  topGrad.addColorStop(0, '#fef9f7');
-  topGrad.addColorStop(0.7, '#f2e1dc');
-  topGrad.addColorStop(1, '#dfc4bc');
-  ctx.fillStyle = topGrad;
-  ctx.beginPath();
-  ctx.ellipse(cx, cyPedestal, pedRadiusX, pedRadiusY, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = '#d2b2aa';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  // Vành chia độ 360° xoay theo nhịp (Turntable degree ticks)
-  const numTicks = 36;
-  ctx.lineWidth = 1.2;
-  for (let i = 0; i < numTicks; i++) {
-    const tickDeg = (i * 10 + vrAngle) % 360;
-    const tickRad = (tickDeg * Math.PI) / 180;
-    const cosT = Math.cos(tickRad);
-    const sinT = Math.sin(tickRad);
-
-    const isMain = (i % 9 === 0);
-    const rInner = isMain ? 0.78 : 0.86;
-    const x1 = cx + cosT * (pedRadiusX * rInner);
-    const y1 = cyPedestal + sinT * (pedRadiusY * rInner);
-    const x2 = cx + cosT * (pedRadiusX * 0.94);
-    const y2 = cyPedestal + sinT * (pedRadiusY * 0.94);
-
-    ctx.strokeStyle = isMain ? '#8f5763' : 'rgba(164, 106, 120, 0.4)';
-    ctx.lineWidth = isMain ? 2 : 1;
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
-  }
-  ctx.restore();
-
-  // Bóng đổ của áo xuống mặt bục xoay
-  ctx.save();
-  ctx.beginPath();
-  const shadowScaleX = Math.max(0.3, Math.abs(cosA));
-  ctx.ellipse(cx, cyPedestal - 4, pedRadiusX * 0.45 * shadowScaleX, pedRadiusY * 0.5, 0, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(73, 54, 58, 0.22)';
-  ctx.filter = 'blur(6px)';
-  ctx.fill();
-  ctx.restore();
-
-  // 4. Vẽ Áo 360° Ở Giữa Bục Xoay (PNG tách nền trong suốt 100%, không nền thừa, không chắp vá)
-  if (vrCurrentImage && vrCurrentImage.complete && vrCurrentImage.naturalWidth > 0) {
-    ctx.save();
-
-    const cyGarment = cyPedestal - pedRadiusY * 0.5 - 12;
-    const targetH = Math.min(h * 0.62, 420) * vrZoom;
-    const aspect = vrCurrentImage.naturalWidth / vrCurrentImage.naturalHeight;
-    const baseW = targetH * aspect;
-
-    const absCos = Math.abs(cosA);
-    // Độ dày cạnh áo khi nhìn nghiêng góc 90°/270°, giúp áo có khối lập thể tự nhiên
-    const minThickness = 0.12;
-    const effScaleX = (absCos * (1 - minThickness) + minThickness) * (cosA >= 0 ? 1 : -1);
-
-    ctx.translate(cx, cyGarment);
-
-    // Nghiêng nhẹ phối cảnh theo góc quay
-    const tilt = sinA * 0.035;
-    ctx.rotate(tilt);
-    ctx.scale(effScaleX, 1);
-
-    const drawX = -baseW * 0.5;
-    const drawY = -targetH;
-
-    // Vẽ trực tiếp ảnh áo PNG đã tách nền trong suốt - sạch sẽ 100%, không bị nền trắng hay khung chữ nhật
-    ctx.drawImage(vrCurrentImage, drawX, drawY, baseW, targetH);
-
-    ctx.restore();
-  } else if (vrIsImageLoading) {
-    ctx.save();
-    ctx.translate(cx, cyPedestal - 120);
-    ctx.strokeStyle = '#a46a78';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    const spinRad = (Date.now() / 250) % (Math.PI * 2);
-    ctx.arc(0, 0, 24, spinRad, spinRad + Math.PI * 1.5);
-    ctx.stroke();
-
-    ctx.fillStyle = '#69454f';
-    ctx.font = '500 13px "Be Vietnam Pro", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Đang nạp áo 360°…', 0, 45);
-    ctx.restore();
-  }
-}
-
-/* ==========================================
-   VÒNG LẶP ANIMATION CHÍNH
-   ========================================== */
-
-function vrAnimationLoop() {
-  vrRenderFrame();
-  vrAnimFrameId = requestAnimationFrame(vrAnimationLoop);
-}
-
-function vrResizeCanvas() {
-  const stage = document.getElementById('vrStage');
-  const canvas = document.getElementById('vrCanvas');
-  if (!stage || !canvas) return;
-
-  const rect = stage.getBoundingClientRect();
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const displayW = Math.max(rect.width, 280);
-  const displayH = Math.max(rect.height, 360);
-
-  if (canvas.width !== Math.round(displayW * dpr) || canvas.height !== Math.round(displayH * dpr)) {
-    canvas.width = Math.round(displayW * dpr);
-    canvas.height = Math.round(displayH * dpr);
-  }
-}
-
-/* ==========================================
-   TƯƠNG TÁC KÉO CHUỘT / VUỐT CẢM ỨNG (DRAG TO ROTATE)
-   ========================================== */
-
-let vrEventsBound = false;
-
-function vrSetupInteractions() {
-  const stage = document.getElementById('vrStage');
-  if (!stage || vrEventsBound) return;
-  vrEventsBound = true;
-
-  // Chuột (Desktop)
-  stage.addEventListener('mousedown', (e) => {
-    if (e.target.closest('.vr-stage-btn') || e.target.closest('.vr-hud')) return;
-    vrIsDragging = true;
-    vrDragStartX = e.clientX;
-    vrDragStartAngle = vrAngle;
-    vrLastDragX = e.clientX;
-    vrVelocity = 0;
-    vrTargetAngle = null;
-    stage.classList.add('grabbing');
-  });
-
-  window.addEventListener('mousemove', (e) => {
-    if (!vrIsDragging) return;
-    const dx = e.clientX - vrDragStartX;
-    const deltaX = e.clientX - vrLastDragX;
-    vrVelocity = deltaX * 0.45;
-    vrLastDragX = e.clientX;
-
-    if (Math.abs(dx) > 3 && vrMode === 'auto') {
-      vrSetMode('manual');
-    }
-
-    vrAngle = ((vrDragStartAngle + dx * 0.55) % 360 + 360) % 360;
-    vrUpdateHUD();
-  });
-
-  window.addEventListener('mouseup', () => {
-    if (vrIsDragging) {
-      vrIsDragging = false;
-      const stageEl = document.getElementById('vrStage');
-      if (stageEl) stageEl.classList.remove('grabbing');
-    }
-  });
-
-  // Cảm ứng (Touch - Mobile)
-  stage.addEventListener('touchstart', (e) => {
-    if (e.target.closest('.vr-stage-btn') || e.target.closest('.vr-hud')) return;
-    if (e.touches.length === 1) {
-      vrIsDragging = true;
-      vrDragStartX = e.touches[0].clientX;
-      vrDragStartAngle = vrAngle;
-      vrLastDragX = e.touches[0].clientX;
-      vrVelocity = 0;
-      vrTargetAngle = null;
-    }
-  }, { passive: true });
-
-  stage.addEventListener('touchmove', (e) => {
-    if (!vrIsDragging || e.touches.length !== 1) return;
-    const curX = e.touches[0].clientX;
-    const dx = curX - vrDragStartX;
-    const deltaX = curX - vrLastDragX;
-    vrVelocity = deltaX * 0.45;
-    vrLastDragX = curX;
-
-    if (Math.abs(dx) > 4 && vrMode === 'auto') {
-      vrSetMode('manual');
-    }
-
-    vrAngle = ((vrDragStartAngle + dx * 0.55) % 360 + 360) % 360;
-    vrUpdateHUD();
-  }, { passive: true });
-
-  stage.addEventListener('touchend', () => {
-    vrIsDragging = false;
-  }, { passive: true });
-
-  // Cuộn chuột để Zoom
-  stage.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    const zoomDelta = -e.deltaY * 0.001;
-    vrZoom = Math.min(1.4, Math.max(0.75, vrZoom + zoomDelta));
-    const zoomSlider = document.getElementById('vrZoomSlider');
-    const zoomVal = document.getElementById('vrZoomValue');
-    if (zoomSlider) zoomSlider.value = Math.round(vrZoom * 100);
-    if (zoomVal) zoomVal.textContent = `${Math.round(vrZoom * 100)}%`;
-  }, { passive: false });
-}
-
-/* ==========================================
-   LIFECYCLE GẮN & GỠ (MOUNT & UNMOUNT)
-   ========================================== */
-
-let vrIsMounted = false;
-let vrResizeObserver = null;
-
-function vrMount() {
-  vrIsMounted = true;
-
-  vrLoadGarment();
-  vrRenderControls();
-  vrUpdateStatusInfo();
-
-  setTimeout(() => {
-    vrResizeCanvas();
-  }, 30);
-
-  const stage = document.getElementById('vrStage');
-  if (stage && window.ResizeObserver && !vrResizeObserver) {
-    vrResizeObserver = new ResizeObserver(() => {
-      vrResizeCanvas();
-    });
-    vrResizeObserver.observe(stage);
-  }
-
-  vrSetupInteractions();
-
-  if (!vrAnimFrameId) {
-    vrAnimFrameId = requestAnimationFrame(vrAnimationLoop);
-  }
-}
-
-function vrUnmount() {
-  vrIsMounted = false;
-  if (vrAnimFrameId) {
-    cancelAnimationFrame(vrAnimFrameId);
-    vrAnimFrameId = null;
-  }
-  if (vrResizeObserver) {
-    vrResizeObserver.disconnect();
-    vrResizeObserver = null;
-  }
+  addToCart(vrProductId, vrColor, 'M', 1, !!buyNow);
 }

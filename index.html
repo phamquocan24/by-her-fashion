@@ -17,6 +17,14 @@
   <link rel="stylesheet" href="assets/css/ar.css">
   <link rel="stylesheet" href="assets/css/vr.css">
   <link rel="stylesheet" href="assets/css/assistant.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
 </head>
 
 <body>
@@ -433,8 +441,14 @@
       </div>
       <div class="wrap ar-shell vr-shell">
         <div class="vr-stage-wrapper">
-          <div id="vrStage" class="vr-stage" role="region" aria-label="Khung xoay 360 độ trang phục">
+          <div id="vrStage" class="vr-stage" role="region" aria-label="Khung xem 3D 360 độ trang phục">
             <canvas id="vrCanvas" class="vr-canvas"></canvas>
+
+            <!-- Màn hình tải mô hình 3D GLB -->
+            <div id="vrLoader" class="vr-loader hidden" aria-live="polite">
+              <div class="vr-spinner"></div>
+              <div class="vr-loader-text" id="vrLoaderText">Đang tải mô hình 3D...</div>
+            </div>
 
             <!-- HUD Thông tin góc xoay & Chế độ -->
             <div class="vr-hud">
@@ -445,16 +459,32 @@
               <div class="vr-hud-badge vr-angle-badge" id="vrHudAngle">0° · Mặt trước</div>
             </div>
 
-            <!-- Gợi ý tương tác kéo chuột/vuốt -->
+            <!-- Gợi ý tương tác kéo chuột/vuốt 3D -->
             <div class="vr-stage-hint" id="vrStageHint">
               <svg viewBox="0 0 24 24" class="hint-icon" aria-hidden="true" fill="currentColor">
                 <path d="M8 7 3 12l5 5v-3h8v3l5-5-5-5v3H8V7z" />
               </svg>
-              <span>Kéo chuột hoặc vuốt để xoay áo 360°</span>
+              <span>Kéo xoay 3D · Chụm để thu phóng</span>
             </div>
 
             <!-- Các nút điều khiển nhanh nổi trên Stage -->
             <div class="vr-stage-controls">
+              <button type="button" class="vr-stage-btn" id="vrBtnWireframe" onclick="vrToggleWireframe()"
+                title="Bật / Tắt khung lưới 3D (Wireframe)" aria-label="Bật tắt khung lưới 3D">
+                <svg viewBox="0 0 24 24" class="stage-btn-icon" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                  <line x1="12" y1="22.08" x2="12" y2="12" />
+                </svg>
+              </button>
+              <button type="button" class="vr-stage-btn" id="vrBtnAxes" onclick="vrToggleAxes()"
+                title="Bật / Tắt trục tọa độ 3D (X, Y, Z)" aria-label="Bật tắt trục tọa độ 3D">
+                <svg viewBox="0 0 24 24" class="stage-btn-icon" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="12" x2="12" y2="3" />
+                  <line x1="12" y1="12" x2="20" y2="17" />
+                  <line x1="12" y1="12" x2="4" y2="17" />
+                </svg>
+              </button>
               <button type="button" class="vr-stage-btn" id="vrBtnTogglePlay" onclick="vrTogglePlay()"
                 title="Tạm dừng / Tiếp tục xoay" aria-label="Tạm dừng / Tiếp tục xoay">
                 <svg viewBox="0 0 24 24" class="stage-btn-icon" id="vrPlayPauseIcon" aria-hidden="true">

@@ -488,8 +488,13 @@
     line-height: 1.45;
   }
   .vr-stage {
-    min-height: 360px;
-    max-height: 54vh;
+    min-height: 380px;
+    max-height: 58vh;
+  }
+  .vr-stage-hint {
+    top: 66px;
+    font-size: 10.5px;
+    padding: 5px 10px;
   }
   .vr-mode-selector {
     grid-template-columns: 1fr 1fr;
@@ -501,4 +506,47 @@
     font-size: 11px;
     gap: 4px;
   }
+}
+
+/* ---- Trạng thái tải mô hình 3D GLB & nút kích hoạt 3D ---- */
+.vr-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(250, 244, 242, 0.82);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: opacity 0.25s ease;
+}
+.vr-loader.hidden {
+  display: none !important;
+}
+.vr-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(164, 106, 120, 0.22);
+  border-top-color: var(--wine);
+  border-radius: 50%;
+  animation: vrSpin 0.8s linear infinite;
+}
+.vr-loader-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wine);
+  letter-spacing: 0.3px;
+}
+@keyframes vrSpin {
+  to { transform: rotate(360deg); }
+}
+
+.vr-stage-btn.active {
+  background: var(--wine) !important;
+  color: #fff !important;
+  border-color: var(--wine) !important;
+  box-shadow: 0 4px 12px rgba(105, 69, 79, 0.28);
 }
